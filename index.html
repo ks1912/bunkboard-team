@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
+<title>BunkBoard Team</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg">
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--ink:#1f2433;--mut:#6b7280;--line:#e5e7eb;--pri:#4f46e5;--ok:#16a34a;--warn:#d97706;--bad:#dc2626}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+#app{max-width:720px;margin:0 auto;padding:14px 14px 90px}
+h1{font-size:20px;margin:6px 0 12px}h2{font-size:16px;margin:16px 0 8px}h3{font-size:14px;margin:0 0 6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.card.cl{cursor:pointer}
+.row{display:flex;gap:8px;align-items:center}.sp{justify-content:space-between}.wrap{flex-wrap:wrap}.grow{flex:1}
+.mut{color:var(--mut);font-size:13px}.sm{font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px}
+@media(min-width:520px){.kpis{grid-template-columns:repeat(4,1fr)}}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}
+.kpi b{display:block;font-size:22px}.kpi span{font-size:12px;color:var(--mut)}
+label{display:block;font-size:13px;color:var(--mut);margin:8px 0 3px}
+input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff;color:var(--ink)}
+input[type=checkbox]{width:auto}
+textarea{min-height:70px}
+button{font:inherit;border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 12px;cursor:pointer;color:var(--ink)}
+button.p{background:var(--pri);color:#fff;border-color:var(--pri)}button.d{color:var(--bad);border-color:var(--bad)}
+button.armed{background:var(--bad);color:#fff}button:disabled{opacity:.5}
+.chip{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;background:#eef2ff;color:var(--pri)}
+.chip.lead{background:#e0f2fe;color:#0369a1}.chip.pilot{background:#fef3c7;color:#b45309}.chip.paying{background:#dcfce7;color:#15803d}.chip.lost{background:#f3f4f6;color:#6b7280}
+.chip.bad{background:#fee2e2;color:var(--bad)}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin:8px 0}.tabs button{white-space:nowrap}.tabs button.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
+nav div{display:flex;width:100%;max-width:720px}nav button{flex:1;border:0;border-radius:0;padding:12px 2px;font-size:12px;background:none}nav button.on{color:var(--pri);font-weight:700}
+.bar{height:10px;border-radius:5px;background:#eef0f4;overflow:hidden;display:flex}.bar i{display:block;height:100%}
+.score{font-weight:700}.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:6px 4px;border-bottom:1px solid var(--line)}th{color:var(--mut);font-weight:600}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:76px;background:#111827;color:#fff;padding:10px 14px;border-radius:8px;z-index:9;max-width:90%;display:none}
+.auth{max-width:380px;margin:40px auto}
+.ck{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+pre{white-space:pre-wrap;background:#f3f4f6;padding:10px;border-radius:8px;font-size:13px}
+a{color:var(--pri)}
+</style>
+</head>
+<body>
+<div id="app">Loading…</div>
+<div id="toast"></div>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+'use strict';
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const inr=n=>'₹'+Number(n||0).toLocaleString('en-IN');
+const todayStr=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const addDays=(s,n)=>{const [y,m,d]=s.split('-').map(Number);const x=new Date(y,m-1,d+n);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
+const fmtDate=s=>{if(!s)return '';const d=new Date(s.length>10?s:s+'T00:00:00');return d.toLocaleDateString('en-IN',{day:'numeric',month:'short'})};
+const digits=s=>String(s||'').replace(/\D/g,'');
+function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.display='none',3500)}
+const STAGES=['lead','pilot','paying','lost'];
+const STAGE_NAME={lead:'Lead',pilot:'Pilot',paying:'Paying',lost:'Lost'};
+const STAGE_COL={lead:'#0ea5e9',pilot:'#f59e0b',paying:'#16a34a',lost:'#9ca3af'};
+const WEIGHT={lead:.2,pilot:.6,paying:1,lost:0};
+const KINDS=["Women's PG","Men's PG","Co-living","Hostel","Other"];
+const LIC=[['trade','GHMC trade licence',3],['fire','Fire NOC / mitigation certificate',3],['building','Building use permission',2],['police','Police registration & resident records',2],['fssai','FSSAI (if food served)',2],['labour','Labour licence',1]];
+const SAFE=[['cctv','CCTV at entrances & corridors'],['ext','Fire extinguishers serviced'],['exit','Emergency exits clear & marked'],['aid','First-aid kit available'],['reg','Visitor register maintained'],['ward','Warden / night security'],['elec','Electrical wiring checked']];
+const DP=[['consent','Consent form for resident data'],['notice','Privacy notice displayed'],['cctvp','CCTV signage & retention limit set']];
+
+/* ---------- state ---------- */
+const cfg=window.BUNKBOARD_CONFIG||{};
+let sb=null,me=null,clients=[],visits=[],profiles=[],view='home',vid=null,tab='overview',range='30',filt={q:'',stage:'',area:'',rep:''},authMode='in',invite='',armed=null,busy=false;
+
+/* ---------- scoring ---------- */
+function scores(c){
+  const a=c.assessment||{},l=a.lic||{},s=a.safe||{},d=a.dp||{};
+  let tw=0,got=0;LIC.forEach(([k,,w])=>{tw+=w;got+=w*(l[k]==='have'?1:l[k]==='applied'?.5:0)});
+  const lic=Math.round(100*got/tw),safe=Math.round(100*SAFE.filter(([k])=>s[k]).length/SAFE.length),dp=Math.round(100*DP.filter(([k])=>d[k]).length/DP.length);
+  return {lic,safe,dp,total:Math.round(.5*lic+.25*safe+.25*dp)};
+}
+const scCls=n=>n>=75?'ok':n>=40?'warn':'bad';
+function reportText(c){
+  const a=c.assessment||{},l=a.lic||{},s=a.safe||{},d=a.dp||{},sc=scores(c);
+  const gaps=[];
+  LIC.forEach(([k,n])=>{if(l[k]!=='have')gaps.push('• '+n+(l[k]==='applied'?' (applied – follow up)':' – missing')) });
+  SAFE.forEach(([k,n])=>{if(!s[k])gaps.push('• '+n)});
+  DP.forEach(([k,n])=>{if(!d[k])gaps.push('• Data privacy: '+n)});
+  return `Compliance check – ${c.name}${c.area?' ('+c.area+')':''}\nOverall score: ${sc.total}/100 (Licences ${sc.lic}, Safety ${sc.safe}, Data privacy ${sc.dp})\n\n`+(gaps.length?'To fix:\n'+gaps.join('\n'):'All checks passed. Well done!')+'\n\nUnder the DPDP Act 2023, penalties for data breaches can reach ₹250 crore – we can help you get compliant.';
+}
+
+/* ---------- data ---------- */
+async function fetchAll(mk){const out=[];for(let f=0;;f+=1000){const {data,error}=await mk().range(f,f+999);if(error)throw error;out.push(...data);if(data.length<1000)break}return out}
+const repName=id=>{const p=profiles.find(x=>x.id===id);return p?(p.full_name||p.email):'—'};
+async function loadAll(){
+  const [c,v,p]=await Promise.all([
+    fetchAll(()=>sb.from('clients').select('*').order('id')),
+    fetchAll(()=>sb.from('visits').select('*').order('id')),
+    sb.from('profiles').select('*')]);
+  if(p.error)throw p.error;
+  clients=c;visits=v;profiles=p.data;
+}
+const isAdmin=()=>me&&me.role==='admin';
+const cById=id=>clients.find(c=>c.id===id);
+
+/* ---------- boot / auth ---------- */
+function setupScreen(){
+  $('#app').innerHTML=`<div class="auth"><h1>Almost there</h1><div class="card"><p>This app isn't connected to a database yet.</p><p>Open <b>config.js</b> and paste your Supabase <b>URL</b> and <b>anon key</b>, then reload. Full steps are in README.md.</p></div></div>`;
+}
+function authScreen(msg){
+  const m=authMode;
+  $('#app').innerHTML=`<div class="auth"><h1>🏠 BunkBoard Team</h1><div class="card">
+  <h3>${m==='in'?'Sign in':m==='up'?'Create your account':m==='forgot'?'Reset password':'Set a new password'}</h3>
+  ${msg?`<p class="${msg.err?'bad':'ok'}">${esc(msg.t)}</p>`:''}
+  ${m==='up'?`<label>Your name</label><input id="a_name" autocomplete="name">`:''}
+  ${m!=='reset'?`<label>Email</label><input id="a_email" type="email" autocomplete="email">`:''}
+  ${m!=='forgot'?`<label>${m==='reset'?'New password':'Password'}</label><input id="a_pw" type="password" autocomplete="${m==='in'?'current-password':'new-password'}">`:''}
+  ${m==='up'?`<label>Invite code (from your manager)</label><input id="a_inv" value="${esc(invite)}" autocapitalize="none">
+  <p class="mut sm">Setting up the very first account? Leave the invite code empty – you become the admin.</p>`:''}
+  <p><button class="p" style="width:100%" onclick="A.auth()">${m==='in'?'Sign in':m==='up'?'Sign up':m==='forgot'?'Send reset link':'Save password'}</button></p>
+  <p class="mut sm">${m==='in'?`<a href="#" onclick="A.mode('up');return false">Create account</a> · <a href="#" onclick="A.mode('forgot');return false">Forgot password?</a>`:`<a href="#" onclick="A.mode('in');return false">Back to sign in</a>`}</p>
+  </div></div>`;
+}
+async function doAuth(){
+  const g=id=>{const e=$('#'+id);return e?e.value.trim():''};
+  const email=g('a_email'),pw=($('#a_pw')||{}).value||'';
+  try{
+    if(authMode==='in'){
+      if(!email||!pw)return authScreen({err:1,t:'Enter email and password'});
+      const {error}=await sb.auth.signInWithPassword({email,password:pw});
+      if(error)return authScreen({err:1,t:error.message});
+    }else if(authMode==='up'){
+      const name=g('a_name');invite=g('a_inv');
+      if(!name||!email||pw.length<6)return authScreen({err:1,t:'Name, email and a password of 6+ characters are required'});
+      const {data,error}=await sb.auth.signUp({email,password:pw,options:{data:{full_name:name,invite_code:invite}}});
+      if(error)return authScreen({err:1,t:/database error|invite/i.test(error.message)?'Sign-up failed – check the invite code with your manager.':error.message});
+      if(!data.session){authMode='in';return authScreen({t:'Account created. Check your email to confirm, then sign in.'})}
+    }else if(authMode==='forgot'){
+      if(!email)return authScreen({err:1,t:'Enter your email'});
+      const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.href.split('#')[0]});
+      authMode='in';return authScreen(error?{err:1,t:error.message}:{t:'If that email exists, a reset link is on its way.'});
+    }else if(authMode==='reset'){
+      if(pw.length<6)return authScreen({err:1,t:'Use 6+ characters'});
+      const {error}=await sb.auth.updateUser({password:pw});
+      if(error)return authScreen({err:1,t:error.message});
+      authMode='in';await boot();
+    }
+  }catch(e){authScreen({err:1,t:e.message||String(e)})}
+}
+async function boot(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){me=null;return authScreen()}
+  $('#app').textContent='Loading…';
+  try{
+    const {data,error}=await sb.from('profiles').select('*').eq('id',session.user.id).single();
+    if(error)throw error;
+    me=data;
+    if(!me.active){$('#app').innerHTML=`<div class="auth"><div class="card"><h3>Account switched off</h3><p>Ask your manager to reactivate your account.</p><button onclick="A.out()">Sign out</button></div></div>`;return}
+    await loadAll();
+    view='home';render();
+  }catch(e){$('#app').innerHTML=`<div class="auth"><div class="card"><h3>Couldn't load</h3><p class="bad">${esc(e.message||e)}</p><p class="mut">Did you run schema.sql in Supabase?</p><button onclick="boot()">Retry</button> <button onclick="A.out()">Sign out</button></div></div>`}
+}
+
+/* ---------- shell ---------- */
+function render(){
+  if(!me)return;
+  let body='';
+  try{
+    body=view==='home'?vHome():view==='clients'?vClients():view==='add'?vAdd():view==='fu'?vFollow():view==='more'?vMore():view==='client'?vClient():view==='refs'?vRefs():view==='team'?vTeam():'';
+  }catch(e){body=`<p class="bad">Error: ${esc(e.message)}</p>`}
+  const nav=[['home','🏠','Home'],['clients','📋','Clients'],['add','➕','Add'],['fu','⏰','Follow-ups'],['more','⋯','More']];
+  const cur=['client'].includes(view)?'clients':['refs','team'].includes(view)?'more':view;
+  $('#app').innerHTML=body+`<nav><div>${nav.map(([k,i,n])=>`<button class="${cur===k?'on':''}" onclick="A.go('${k}')">${i}<br>${n}</button>`).join('')}</div></nav>`;
+}
+function go(v,id){view=v;vid=id||null;if(v==='client')tab='overview';armed=null;render();window.scrollTo(0,0)}
+
+/* ---------- home ---------- */
+function stageStack(list){
+  const n=list.length||1;
+  return `<div class="bar">${STAGES.map(s=>`<i style="width:${100*list.filter(c=>c.stage===s).length/n}%;background:${STAGE_COL[s]}"></i>`).join('')}</div>
+  <div class="row wrap sm mut" style="margin-top:6px">${STAGES.map(s=>`<span><span style="color:${STAGE_COL[s]}">●</span> ${STAGE_NAME[s]} ${list.filter(c=>c.stage===s).length}</span>`).join('')}</div>`;
+}
+const money=list=>{let booked=0,pipe=0,wt=0;list.forEach(c=>{const t=Number(c.setup_fee)+Number(c.yearly_fee);if(c.stage==='paying')booked+=t;else if(c.stage!=='lost'){pipe+=t;wt+=t*WEIGHT[c.stage]}});return {booked,pipe,wt}};
+function sinceISO(r){return r==='all'?'':new Date(Date.now()-Number(r)*864e5).toISOString()}
+function vHome(){
+  const t=todayStr(),due=clients.filter(c=>c.next_follow_up&&c.next_follow_up<=t&&c.stage!=='lost').sort((a,b)=>a.next_follow_up<b.next_follow_up?-1:1);
+  const m=money(clients);
+  let h=`<h1>${isAdmin()?'Team overview':'Hi, '+esc((me.full_name||'').split(' ')[0])}</h1>
+  <div class="kpis"><div class="kpi"><b>${clients.length}</b><span>PGs / hostels</span></div><div class="kpi"><b>${clients.filter(c=>c.stage==='paying').length}</b><span>Paying</span></div>
+  <div class="kpi"><b>${inr(m.booked)}</b><span>Booked revenue</span></div><div class="kpi"><b>${due.length}</b><span>Follow-ups due</span></div></div>
+  <div class="card"><h3>Pipeline</h3>${stageStack(clients)}<p class="mut sm" style="margin:8px 0 0">Open pipeline ${inr(m.pipe)} · weighted expected ${inr(Math.round(m.wt))}</p></div>
+  <div class="card"><h3>Needs attention today</h3>${due.length?due.slice(0,6).map(c=>`<div class="ck" onclick="A.go('client','${esc(c.id)}')" style="cursor:pointer"><div class="grow"><b>${esc(c.name)}</b><div class="mut sm">${esc(c.next_follow_up_note||'Follow up')} · ${c.next_follow_up<t?'<span class="bad">overdue</span> ':''}${fmtDate(c.next_follow_up)}</div></div><span class="chip ${c.stage}">${STAGE_NAME[c.stage]}</span></div>`).join(''):'<p class="mut">Nothing due. Nice!</p>'}${due.length>6?`<p class="sm"><a href="#" onclick="A.go('fu');return false">See all ${due.length}</a></p>`:''}</div>`;
+  if(isAdmin()){
+    const since=sinceISO(range),inR=x=>!since||x>=since;
+    const reps=profiles.filter(p=>p.active||clients.some(c=>c.rep_id===p.id));
+    h+=`<div class="card"><div class="row sp"><h3>Rep performance</h3><select id="rng" style="width:auto" onchange="A.rng(this.value)"><option value="7"${range==='7'?' selected':''}>7 days</option><option value="30"${range==='30'?' selected':''}>30 days</option><option value="all"${range==='all'?' selected':''}>All time</option></select></div>
+    <div style="overflow-x:auto"><table><tr><th>Rep</th><th>New</th><th>Visits</th><th>Won</th><th>Clients</th><th>Booked</th></tr>${reps.map(p=>{const mine=clients.filter(c=>c.rep_id===p.id);return `<tr><td>${esc(p.full_name||p.email)}${p.active?'':' <span class="chip lost">off</span>'}</td><td>${mine.filter(c=>inR(c.created_at)).length}</td><td>${visits.filter(v=>v.rep_id===p.id&&inR(v.created_at)).length}</td><td>${mine.filter(c=>c.stage==='paying'&&inR(c.stage_changed_at)).length}</td><td>${mine.length}</td><td>${inr(money(mine).booked)}</td></tr>`}).join('')}</table></div></div>`;
+    const areas={};clients.forEach(c=>{const a=c.area||'(no area)';areas[a]=(areas[a]||0)+1});
+    const al=Object.entries(areas).sort((a,b)=>b[1]-a[1]).slice(0,8),mx=al.length?al[0][1]:1;
+    if(al.length)h+=`<div class="card"><h3>Clients by area</h3>${al.map(([a,n])=>`<div class="row" style="margin:4px 0"><span style="width:110px" class="sm">${esc(a)}</span><div class="bar grow"><i style="width:${100*n/mx}%;background:var(--pri)"></i></div><b class="sm">${n}</b></div>`).join('')}</div>`;
+  }
+  return h;
+}
+function setRange(v){range=v;render()}
+
+/* ---------- clients list ---------- */
+function filtered(){
+  const q=filt.q.toLowerCase();
+  return clients.filter(c=>(!filt.stage||c.stage===filt.stage)&&(!filt.area||c.area===filt.area)&&(!filt.rep||c.rep_id===filt.rep)&&(!q||(c.name+' '+c.area+' '+c.owner_name+' '+c.owner_phone).toLowerCase().includes(q))).sort((a,b)=>a.updated_at<b.updated_at?1:-1);
+}
+function listHtml(){
+  const l=filtered();
+  return (l.length?l.map(c=>{const sc=scores(c);return `<div class="card cl" onclick="A.go('client','${esc(c.id)}')"><div class="row sp"><b>${esc(c.name)}</b><span class="chip ${c.stage}">${STAGE_NAME[c.stage]}</span></div>
+  <div class="mut sm">${esc(c.area||'—')} · ${esc(c.kind)}${c.beds?' · '+c.beds+' beds':''}${isAdmin()?' · '+esc(repName(c.rep_id)):''}</div>
+  <div class="row sp sm" style="margin-top:4px"><span>Compliance <span class="score ${scCls(sc.total)}">${sc.total}</span></span>${c.next_follow_up?`<span class="${c.next_follow_up<todayStr()?'bad':'mut'}">⏰ ${fmtDate(c.next_follow_up)}</span>`:''}</div></div>`}).join(''):'<p class="mut">No clients match. Tap ➕ Add to create one.</p>')+`<p class="mut sm">${l.length} of ${clients.length} shown</p>`;
+}
+function vClients(){
+  const areas=[...new Set(clients.map(c=>c.area).filter(Boolean))].sort();
+  return `<h1>Clients</h1><div class="card"><input id="q" placeholder="Search name, area, owner, phone" value="${esc(filt.q)}" oninput="A.q(this.value)">
+  <div class="row" style="margin-top:8px"><select onchange="A.f('stage',this.value)"><option value="">All stages</option>${STAGES.map(s=>`<option value="${s}"${filt.stage===s?' selected':''}>${STAGE_NAME[s]}</option>`).join('')}</select>
+  <select onchange="A.f('area',this.value)"><option value="">All areas</option>${areas.map(a=>`<option${filt.area===a?' selected':''}>${esc(a)}</option>`).join('')}</select>
+  ${isAdmin()?`<select onchange="A.f('rep',this.value)"><option value="">All reps</option>${profiles.map(p=>`<option value="${esc(p.id)}"${filt.rep===p.id?' selected':''}>${esc(p.full_name||p.email)}</option>`).join('')}</select>`:''}</div></div><div id="list">${listHtml()}</div>`;
+}
+
+/* ---------- add client ---------- */
+let dupOk=false;
+function refOptions(sel,excl){return `<option value="">— none —</option>`+clients.filter(c=>c.id!==excl).map(c=>`<option value="${esc(c.id)}"${c.id===sel?' selected':''}>${esc(c.name)} (${esc(c.area||'—')})</option>`).join('')}
+function vAdd(){
+  dupOk=false;
+  return `<h1>Add PG / hostel</h1><div class="card" id="addf">
+  <label>PG / hostel name *</label><input id="n_name">
+  <div class="row"><div class="grow"><label>Area</label><input id="n_area" placeholder="Ameerpet"></div><div class="grow"><label>Beds</label><input id="n_beds" type="number" min="0" inputmode="numeric"></div></div>
+  <label>Type</label><select id="n_kind">${KINDS.map(k=>`<option>${esc(k)}</option>`).join('')}</select>
+  <label>Owner name</label><input id="n_on">
+  <label>Owner phone</label><input id="n_op" type="tel" inputmode="tel">
+  <label>Referred by (existing client)</label><select id="n_rc">${refOptions()}</select>
+  <label>…or someone else (name)</label><input id="n_rt" placeholder="e.g. Broker Ravi">
+  <div id="dup"></div>
+  <p><button class="p" style="width:100%" id="addb" onclick="A.add()">Save client</button></p></div>`;
+}
+async function addClient(){
+  if(busy)return;const g=id=>$('#'+id).value.trim();
+  const name=g('n_name');if(!name)return toast('Enter the PG name');
+  const phone=g('n_op');
+  busy=true;
+  try{
+    if(!dupOk&&digits(phone).length>=10){
+      const {data,error}=await sb.rpc('find_duplicate',{p_phone:phone});
+      if(error)throw error;
+      if(data&&data.length){
+        $('#dup').innerHTML=`<div class="card" style="border-color:var(--warn)"><b class="warn">This phone already exists</b>${data.map(d=>`<div class="sm">${esc(d.client_name)} (${esc(d.area||'—')}) – with ${esc(d.rep_name||'another rep')}, ${esc(STAGE_NAME[d.stage]||d.stage)}</div>`).join('')}<div class="sm mut">Tap Save again to add anyway.</div></div>`;
+        dupOk=true;busy=false;return;
+      }
+    }
+    const row={name,area:g('n_area'),kind:g('n_kind'),beds:parseInt(g('n_beds'))||0,owner_name:g('n_on'),owner_phone:phone,referred_by_client:$('#n_rc').value||null,referred_by_text:g('n_rt')};
+    const {data,error}=await sb.from('clients').insert(row).select().single();
+    if(error)throw error;
+    clients.push(data);toast('Saved');busy=false;go('client',data.id);
+  }catch(e){busy=false;toast('Could not save: '+(e.message||e))}
+}
+
+/* ---------- client detail ---------- */
+function vClient(){
+  const c=cById(vid);if(!c){view='clients';return vClients()}
+  const sc=scores(c);
+  const tabs=[['overview','Overview'],['check','Checklist'],['visits','Visits'],['deal','Deal & details']];
+  let h=`<div class="row sp"><button onclick="A.go('clients')">← Back</button><span class="chip ${c.stage}">${STAGE_NAME[c.stage]}</span></div>
+  <h1>${esc(c.name)}</h1><div class="mut" style="margin:-8px 0 8px">${esc(c.area||'—')} · ${esc(c.kind)}${c.beds?' · '+c.beds+' beds':''}${isAdmin()?' · Rep: '+esc(repName(c.rep_id)):''}</div>
+  <div class="tabs">${tabs.map(([k,n])=>`<button class="${tab===k?'on':''}" onclick="A.tab('${k}')">${n}</button>`).join('')}</div>`;
+  if(tab==='overview'){
+    const ph=digits(c.owner_phone),wa=ph?(ph.length===10?'91'+ph:ph):'';
+    h+=`<div class="card"><h3>Owner</h3><div>${esc(c.owner_name||'—')}</div><div class="mut">${esc(c.owner_phone||'No phone')}</div>
+    ${ph?`<div class="row" style="margin-top:8px"><a href="tel:${esc(ph)}"><button>📞 Call</button></a><a href="https://wa.me/${esc(wa)}" target="_blank" rel="noopener"><button>💬 WhatsApp</button></a></div>`:''}</div>
+    <div class="card"><h3>Compliance score <span class="score ${scCls(sc.total)}">${sc.total}/100</span></h3><div class="mut sm">Licences ${sc.lic} · Safety ${sc.safe} · Data privacy ${sc.dp}</div>
+    <div class="row" style="margin-top:8px"><button onclick="A.tab('check')">Run checklist</button><button onclick="A.report('${esc(c.id)}')">Share report</button></div></div>
+    <div class="card"><h3>Stage</h3><div class="row wrap">${STAGES.map(s=>`<button class="${c.stage===s?'p':''}" onclick="A.stage('${esc(c.id)}','${s}')">${STAGE_NAME[s]}</button>`).join('')}</div>
+    ${c.stage==='lost'&&c.lost_reason?`<p class="mut sm">Lost: ${esc(c.lost_reason)}</p>`:''}</div>
+    <div class="card"><h3>Next follow-up</h3>${c.next_follow_up?`<div>${fmtDate(c.next_follow_up)} – ${esc(c.next_follow_up_note||'Follow up')}</div>`:'<div class="mut">Not scheduled</div>'}<div class="mut sm">Set it from the Visits tab.</div></div>
+    ${c.referred_by_client||c.referred_by_text?`<div class="card"><h3>Referred by</h3>${c.referred_by_client&&cById(c.referred_by_client)?`<a href="#" onclick="A.go('client','${esc(c.referred_by_client)}');return false">${esc(cById(c.referred_by_client).name)}</a>`:esc(c.referred_by_text)}</div>`:''}`;
+  }else if(tab==='check'){
+    const a=c.assessment||{},l=a.lic||{},s=a.safe||{},d=a.dp||{};
+    h+=`<div class="card"><h3>Score <span class="score ${scCls(sc.total)}">${sc.total}/100</span></h3><div class="mut sm">Licences ${sc.lic} · Safety ${sc.safe} · Data privacy ${sc.dp}</div></div>
+    <div class="card"><h3>Licences</h3>${LIC.map(([k,n])=>`<div class="ck"><span class="grow">${esc(n)}</span><select style="width:auto" onchange="A.as('${esc(c.id)}','lic','${k}',this.value)"><option value="none"${!l[k]||l[k]==='none'?' selected':''}>None</option><option value="applied"${l[k]==='applied'?' selected':''}>Applied</option><option value="have"${l[k]==='have'?' selected':''}>Have</option></select></div>`).join('')}</div>
+    <div class="card"><h3>Safety on site</h3>${SAFE.map(([k,n])=>`<label class="ck" style="margin:0;color:inherit;font-size:15px"><input type="checkbox" ${s[k]?'checked':''} onchange="A.as('${esc(c.id)}','safe','${k}',this.checked)"> ${esc(n)}</label>`).join('')}</div>
+    <div class="card"><h3>Data privacy (DPDP)</h3>${DP.map(([k,n])=>`<label class="ck" style="margin:0;color:inherit;font-size:15px"><input type="checkbox" ${d[k]?'checked':''} onchange="A.as('${esc(c.id)}','dp','${k}',this.checked)"> ${esc(n)}</label>`).join('')}</div>`;
+  }else if(tab==='visits'){
+    const vs=visits.filter(v=>v.client_id===c.id).sort((a,b)=>a.created_at<b.created_at?1:-1);
+    h+=`<div class="card"><h3>Log a visit / call</h3><select id="v_kind"><option value="visit">Visit</option><option value="call">Call</option><option value="whatsapp">WhatsApp</option><option value="other">Other</option></select>
+    <label>What happened?</label><textarea id="v_note"></textarea>
+    <div class="row"><div class="grow"><label>Next follow-up</label><input id="v_next" type="date" value="${esc(c.next_follow_up||'')}"></div><div class="grow"><label>Reminder note</label><input id="v_nn" value="${esc(c.next_follow_up_note||'')}"></div></div>
+    <p><button class="p" style="width:100%" onclick="A.visit('${esc(c.id)}')">Save</button></p></div>
+    <h2>History</h2>${vs.length?vs.map(v=>`<div class="card"><div class="row sp"><b class="sm">${esc(v.kind)}</b><span class="mut sm">${fmtDate(v.created_at)} · ${esc(repName(v.rep_id))}</span></div><div>${esc(v.note||'—')}</div></div>`).join(''):'<p class="mut">No visits yet.</p>'}`;
+  }else{
+    h+=`<div class="card"><label>Name</label><input id="e_name" value="${esc(c.name)}">
+    <div class="row"><div class="grow"><label>Area</label><input id="e_area" value="${esc(c.area)}"></div><div class="grow"><label>Beds</label><input id="e_beds" type="number" min="0" value="${c.beds}"></div></div>
+    <label>Type</label><select id="e_kind">${KINDS.map(k=>`<option${k===c.kind?' selected':''}>${esc(k)}</option>`).join('')}</select>
+    <label>Owner name</label><input id="e_on" value="${esc(c.owner_name)}"><label>Owner phone</label><input id="e_op" type="tel" value="${esc(c.owner_phone)}">
+    <label>Stage</label><select id="e_stage">${STAGES.map(s=>`<option value="${s}"${c.stage===s?' selected':''}>${STAGE_NAME[s]}</option>`).join('')}</select>
+    <label>Lost reason (if lost)</label><input id="e_lr" value="${esc(c.lost_reason)}">
+    <div class="row"><div class="grow"><label>Setup fee ₹</label><input id="e_sf" type="number" min="0" value="${c.setup_fee}"></div><div class="grow"><label>Yearly fee ₹</label><input id="e_yf" type="number" min="0" value="${c.yearly_fee}"></div></div>
+    <label>Referred by (client)</label><select id="e_rc">${refOptions(c.referred_by_client,c.id)}</select><label>…or other referrer</label><input id="e_rt" value="${esc(c.referred_by_text)}">
+    ${isAdmin()?`<label>Assigned rep</label><select id="e_rep">${profiles.map(p=>`<option value="${esc(p.id)}"${p.id===c.rep_id?' selected':''}>${esc(p.full_name||p.email)}</option>`).join('')}</select>`:''}
+    <p><button class="p" style="width:100%" onclick="A.save('${esc(c.id)}')">Save changes</button></p></div>
+    ${isAdmin()?`<p><button class="d ${armed===c.id?'armed':''}" onclick="A.del('${esc(c.id)}')">${armed===c.id?'Tap again to delete for good':'Delete client'}</button></p>`:''}`;
+  }
+  return h;
+}
+async function upd(id,patch){
+  const {data,error}=await sb.from('clients').update(patch).eq('id',id).select().single();
+  if(error)throw error;
+  const i=clients.findIndex(c=>c.id===id);if(i>=0)clients[i]=data;return data;
+}
+async function setAssess(id,grp,key,val){
+  const c=cById(id),a=JSON.parse(JSON.stringify(c.assessment||{}));a[grp]=a[grp]||{};a[grp][key]=val;
+  try{await upd(id,{assessment:a});render()}catch(e){toast('Not saved: '+e.message);render()}
+}
+async function setStage(id,s){
+  try{const patch={stage:s};if(s!=='lost')patch.lost_reason='';await upd(id,patch);render()}catch(e){toast(e.message)}
+}
+async function addVisit(id){
+  if(busy)return;busy=true;
+  try{
+    const note=$('#v_note').value.trim(),next=$('#v_next').value||null;
+    if(!note&&!next){busy=false;return toast('Add a note or a follow-up date')}
+    if(note){const {data,error}=await sb.from('visits').insert({client_id:id,kind:$('#v_kind').value,note}).select().single();if(error)throw error;visits.push(data)}
+    await upd(id,{next_follow_up:next,next_follow_up_note:$('#v_nn').value.trim()});
+    toast('Saved');
+  }catch(e){toast('Could not save: '+(e.message||e))}
+  busy=false;render();
+}
+async function saveDeal(id){
+  if(busy)return;const g=x=>$('#'+x).value.trim();
+  if(!g('e_name'))return toast('Name is required');
+  busy=true;
+  try{
+    const patch={name:g('e_name'),area:g('e_area'),beds:parseInt(g('e_beds'))||0,kind:g('e_kind'),owner_name:g('e_on'),owner_phone:g('e_op'),stage:g('e_stage'),lost_reason:g('e_stage')==='lost'?g('e_lr'):'',setup_fee:Number(g('e_sf'))||0,yearly_fee:Number(g('e_yf'))||0,referred_by_client:$('#e_rc').value||null,referred_by_text:g('e_rt')};
+    if(isAdmin()&&$('#e_rep'))patch.rep_id=$('#e_rep').value;
+    await upd(id,patch);toast('Saved');
+  }catch(e){toast('Could not save: '+(e.message||e))}
+  busy=false;render();
+}
+async function delClient(id){
+  if(armed!==id){armed=id;return render()}
+  try{const {error}=await sb.from('clients').delete().eq('id',id);if(error)throw error;clients=clients.filter(c=>c.id!==id);visits=visits.filter(v=>v.client_id!==id);toast('Deleted');go('clients')}catch(e){toast(e.message)}
+}
+function shareReport(id){
+  const c=cById(id),t=reportText(c);
+  $('#app').innerHTML=`<div class="row sp"><button onclick="A.go('client','${esc(id)}')">← Back</button></div><h1>Owner report</h1><pre id="rt">${esc(t)}</pre>
+  <div class="row"><button class="p" onclick="A.copy()">Copy</button>${digits(c.owner_phone)?`<a href="https://wa.me/${digits(c.owner_phone).length===10?'91'+digits(c.owner_phone):digits(c.owner_phone)}?text=${encodeURIComponent(t)}" target="_blank" rel="noopener"><button>Send on WhatsApp</button></a>`:''}</div>`;
+  shareReport.txt=t;
+}
+async function copyTxt(){try{await navigator.clipboard.writeText(shareReport.txt);toast('Copied')}catch{const r=document.createRange();r.selectNodeContents($('#rt'));const s=getSelection();s.removeAllRanges();s.addRange(r);toast('Select & copy the text')}}
+
+/* ---------- follow-ups ---------- */
+function vFollow(){
+  const t=todayStr(),l=clients.filter(c=>c.next_follow_up&&c.stage!=='lost').sort((a,b)=>a.next_follow_up<b.next_follow_up?-1:1);
+  const grp=[['Overdue',l.filter(c=>c.next_follow_up<t)],['Today',l.filter(c=>c.next_follow_up===t)],['Upcoming',l.filter(c=>c.next_follow_up>t)]];
+  return `<h1>Follow-ups</h1>`+(l.length?grp.map(([n,a])=>a.length?`<h2>${n} (${a.length})</h2>`+a.map(c=>`<div class="card"><div class="row sp"><b onclick="A.go('client','${esc(c.id)}')" style="cursor:pointer">${esc(c.name)}</b><span class="mut sm">${fmtDate(c.next_follow_up)}</span></div><div class="mut sm">${esc(c.next_follow_up_note||'Follow up')} · ${esc(c.area||'—')}${isAdmin()?' · '+esc(repName(c.rep_id)):''}</div>
+  <div class="row" style="margin-top:8px"><button onclick="A.fu('${esc(c.id)}','done')">✓ Done</button><button onclick="A.fu('${esc(c.id)}','snooze')">+3 days</button></div></div>`).join(''):'').join(''):'<p class="mut">No follow-ups scheduled. Set one from a client\'s Visits tab.</p>');
+}
+async function fuAct(id,a){
+  try{await upd(id,a==='done'?{next_follow_up:null,next_follow_up_note:''}:{next_follow_up:addDays(todayStr(),3)});render()}catch(e){toast(e.message)}
+}
+
+/* ---------- referrals ---------- */
+function vRefs(){
+  const by={};clients.forEach(c=>{if(c.referred_by_client){(by[c.referred_by_client]=by[c.referred_by_client]||[]).push(c)}});
+  const txt={};clients.forEach(c=>{if(!c.referred_by_client&&c.referred_by_text){(txt[c.referred_by_text]=txt[c.referred_by_text]||[]).push(c)}});
+  const refd=clients.filter(c=>c.referred_by_client||c.referred_by_text),non=clients.filter(c=>!(c.referred_by_client||c.referred_by_text));
+  const rate=l=>l.length?Math.round(100*l.filter(c=>c.stage==='paying').length/l.length)+'%':'—';
+  const row=(n,l)=>`<div class="card"><b>${esc(n)}</b> <span class="mut sm">referred ${l.length} · ${l.filter(c=>c.stage==='paying').length} paying</span>${l.map(c=>`<div class="sm" onclick="A.go('client','${esc(c.id)}')" style="cursor:pointer">• ${esc(c.name)} <span class="chip ${c.stage}">${STAGE_NAME[c.stage]}</span></div>`).join('')}</div>`;
+  return `<div class="row sp"><button onclick="A.go('more')">← Back</button></div><h1>Referrals</h1>
+  <div class="kpis"><div class="kpi"><b>${refd.length}</b><span>Referred clients</span></div><div class="kpi"><b>${rate(refd)}</b><span>Referred → paying</span></div><div class="kpi"><b>${non.length}</b><span>Not referred</span></div><div class="kpi"><b>${rate(non)}</b><span>Others → paying</span></div></div>`+
+  (Object.keys(by).length+Object.keys(txt).length?Object.entries(by).map(([id,l])=>cById(id)?row(cById(id).name,l):'').join('')+Object.entries(txt).map(([n,l])=>row(n,l)).join(''):'<p class="mut">No referrals recorded yet. Add "Referred by" when creating a client.</p>');
+}
+
+/* ---------- more / team ---------- */
+function csvCell(v){let s=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"'}
+function exportCsv(){
+  const head=['Name','Area','Type','Beds','Owner','Phone','Stage','Setup fee','Yearly fee','Rep','Referred by','Compliance score','Next follow-up','Created'];
+  const rows=clients.map(c=>[c.name,c.area,c.kind,c.beds,c.owner_name,c.owner_phone,STAGE_NAME[c.stage],c.setup_fee,c.yearly_fee,repName(c.rep_id),(c.referred_by_client&&cById(c.referred_by_client)?cById(c.referred_by_client).name:c.referred_by_text),scores(c).total,c.next_follow_up||'',c.created_at.slice(0,10)]);
+  const csv='\ufeff'+[head,...rows].map(r=>r.map(csvCell).join(',')).join('\r\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='bunkboard-clients-'+todayStr()+'.csv';document.body.appendChild(a);a.click();a.remove();toast('CSV downloaded – opens in Excel');
+}
+function vMore(){
+  return `<h1>More</h1><div class="card"><b>${esc(me.full_name||me.email)}</b><div class="mut sm">${esc(me.email)} · ${me.role==='admin'?'Admin':'Sales rep'}</div></div>
+  <div class="card"><button style="width:100%;margin-bottom:8px" onclick="A.go('refs')">🔗 Referrals</button>
+  <button style="width:100%;margin-bottom:8px" onclick="A.csv()">⬇️ Export clients to Excel/CSV</button>
+  ${isAdmin()?`<button style="width:100%;margin-bottom:8px" onclick="A.go('team')">👥 Team & invite code</button>`:''}
+  <button style="width:100%;margin-bottom:8px" onclick="A.refresh()">🔄 Refresh data</button>
+  <button style="width:100%" onclick="A.out()">Sign out</button></div>
+  <p class="mut sm">Privacy: client data (owner names and phone numbers) is personal data under the DPDP Act. Only use it for sales follow-up and never share it outside the company.</p>`;
+}
+let inviteCode='';
+async function vTeamLoad(){
+  const {data}=await sb.from('app_settings').select('*').eq('key','invite_code').maybeSingle();
+  inviteCode=data?data.value:'';render();
+}
+function vTeam(){
+  if(!inviteCode)vTeamLoad();
+  return `<div class="row sp"><button onclick="A.go('more')">← Back</button></div><h1>Team</h1>
+  <div class="card"><h3>Invite code</h3><div style="font-size:24px;letter-spacing:2px;font-family:monospace">${esc(inviteCode||'…')}</div><p class="mut sm">Give this code to new reps. They sign up with it. Regenerate it if it leaks.</p><button onclick="A.regen()">Regenerate code</button></div>
+  <h2>People</h2>${profiles.map(p=>`<div class="card"><div class="row sp"><div><b>${esc(p.full_name||'—')}</b><div class="mut sm">${esc(p.email)}</div></div><span class="chip ${p.active?'paying':'lost'}">${p.role}${p.active?'':' · off'}</span></div>
+  ${p.id===me.id?'':`<div class="row" style="margin-top:8px"><button onclick="A.person('${esc(p.id)}','active',${!p.active})">${p.active?'Switch off':'Switch on'}</button><button onclick="A.person('${esc(p.id)}','role','${p.role==='admin'?'rep':'admin'}')">Make ${p.role==='admin'?'rep':'admin'}</button></div>`}</div>`).join('')}`;
+}
+async function regen(){
+  const v=Array.from(crypto.getRandomValues(new Uint8Array(4)),b=>b.toString(16).padStart(2,'0')).join('');
+  const {error}=await sb.from('app_settings').update({value:v}).eq('key','invite_code');
+  if(error)return toast(error.message);inviteCode=v;toast('New code set');render();
+}
+async function person(id,k,v){
+  const {data,error}=await sb.from('profiles').update({[k]:v}).eq('id',id).select().single();
+  if(error)return toast(error.message);
+  const i=profiles.findIndex(p=>p.id===id);if(i>=0)profiles[i]=data;render();
+}
+
+/* ---------- actions ---------- */
+const A={
+  go,auth:doAuth,out:async()=>{await sb.auth.signOut();me=null;authMode='in';authScreen()},
+  mode:m=>{authMode=m;authScreen()},tab:t=>{tab=t;render()},rng:setRange,
+  q:v=>{filt.q=v;$('#list').innerHTML=listHtml()},f:(k,v)=>{filt[k]=v;$('#list').innerHTML=listHtml()},
+  add:addClient,stage:setStage,as:setAssess,visit:addVisit,save:saveDeal,del:delClient,report:shareReport,copy:copyTxt,
+  fu:fuAct,csv:exportCsv,regen,person,
+  refresh:async()=>{try{await loadAll();toast('Updated');render()}catch(e){toast(e.message)}}
+};
+window.A=A;window.boot=boot;
+
+/* ---------- start ---------- */
+(function init(){
+  if(!cfg.SUPABASE_URL||!cfg.SUPABASE_ANON_KEY||!window.supabase)return setupScreen();
+  sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
+  sb.auth.onAuthStateChange((ev)=>{
+    if(ev==='PASSWORD_RECOVERY'){authMode='reset';authScreen()}
+    else if(ev==='SIGNED_OUT'){me=null}
+    else if(ev==='SIGNED_IN'&&!me&&authMode!=='reset')setTimeout(boot,0);
+  });
+  boot();
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&me&&!busy&&!['add','client'].includes(view))A.refresh()});
+})();
+</script>
+</body>
+</html>
