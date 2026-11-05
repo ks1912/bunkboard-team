@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
+<title>BunkBoard Finder – Demo</title>
+<link rel="icon" href="icon.svg">
+<style>
+:root{--pri:#4f46e5;--pri2:#3730a3;--bg:#f6f7fb;--line:#e5e7eb;--ink:#1f2433;--mut:#6b7280;--ok:#15803d;--warn:#b45309;--bad:#dc2626}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.top{background:var(--pri);color:#fff;padding:10px 14px;position:sticky;top:0;z-index:5}
+.top .r{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.top b{font-size:17px}.top small{opacity:.85;display:block;font-size:12px}
+.top a,.top button{color:#fff;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);border-radius:6px;padding:5px 8px;font-size:12px;text-decoration:none;font-family:inherit;cursor:pointer}
+.demo{background:#FEF3C7;color:#92400E;text-align:center;font-size:12px;padding:4px}
+#app{max-width:760px;margin:0 auto;padding:12px 12px 90px}
+h1{font-size:20px;margin:4px 0 10px}h2{font-size:16px;margin:0 0 8px}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.row{display:flex;gap:8px;align-items:center}.sp{justify-content:space-between}.wrap{flex-wrap:wrap}.grow{flex:1}
+.mut{color:var(--mut);font-size:13px}.sm{font-size:12px}
+button.b{font:inherit;border-radius:8px;padding:9px 13px;cursor:pointer;border:1.5px solid var(--pri);background:#fff;color:var(--pri);font-weight:600}
+button.b.p{background:var(--pri);color:#fff}button.b.s{padding:5px 9px;font-size:13px}button.b.on{background:#eef2ff}
+input,select{font:inherit;width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+input[type=checkbox]{width:auto}input[type=range]{padding:0}
+label{display:block;font-size:12px;font-weight:600;color:var(--mut);margin:8px 0 3px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}.chips button{white-space:nowrap;border:1px solid var(--line);background:#fff;border-radius:99px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}.chips button.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.hero{height:110px;border-radius:12px;display:flex;align-items:flex-end;padding:10px;color:#fff;font-size:34px;margin-bottom:8px}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:12px;font-weight:700}
+.badge.v{background:#dcfce7;color:var(--ok)}.badge.p{background:#fef3c7;color:var(--warn)}.badge.n{background:#fee2e2;color:var(--bad)}
+.tag{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;background:#eef2ff;color:var(--pri)}
+.live{color:var(--ok);font-size:12px;font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:7px 4px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--mut);font-weight:600}
+.ck{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid #eef0f4}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom);z-index:6}
+nav div{display:flex;width:100%;max-width:760px}nav button{flex:1;border:0;background:none;padding:10px 2px;font:inherit;font-size:12px;cursor:pointer;color:var(--mut)}nav button.on{color:var(--pri);font-weight:700}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.md{background:#fff;width:100%;max-width:520px;border-radius:14px 14px 0 0;padding:16px;max-height:92vh;overflow:auto}
+@media(min-width:560px){.ov{align-items:center}.md{border-radius:14px}}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:76px;background:#111827;color:#fff;padding:9px 14px;border-radius:8px;z-index:30;display:none;max-width:90%}
+.steps{display:flex;gap:4px;margin:8px 0}.steps i{flex:1;height:6px;border-radius:3px;background:#e5e7eb}.steps i.d{background:var(--pri)}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+.priv{background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;border-radius:10px;padding:10px;font-size:13px}
+a{color:var(--pri)}
+</style>
+</head>
+<body>
+<div class="top"><div class="r"><div><b>🏠 BunkBoard Finder</b><small>Find a verified PG in Hyderabad</small></div><div class="row"><a href="owner-demo.html" target="_blank" rel="noopener">Owner view →</a><button onclick="F.reset()">Reset</button></div></div></div>
+<div class="demo">DEMO – all PGs, people and prices are fictional. “Sunrise Women's PG” is live-linked to the Owner demo.</div>
+<div id="app"></div>
+<div id="toast"></div>
+<script src="demo-data.js"></script>
+<script>
+'use strict';
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const inr=n=>'₹'+Number(n||0).toLocaleString('en-IN');
+const $=s=>document.querySelector(s);
+const OK='bunkboard-owner-demo-v1',LK='bunkboard-leads-v1',SK='bunkboard-seeker-v1';
+const TN={1:'Single',2:'2-sharing',3:'3-sharing',4:'4-sharing'};
+const LIC=[['trade','GHMC trade licence',3],['fire','Fire NOC / mitigation certificate',3],['building','Building use permission',2],['police','Police registration & resident records',2],['fssai','FSSAI (food)',2],['labour','Labour licence',1]];
+const SAFE=[['cctv','CCTV working at entrances'],['ext','Fire extinguishers serviced'],['exit','Emergency exits clear'],['aid','First-aid kit'],['reg','Visitor register'],['ward','Warden / night security'],['elec','Electrical wiring checked']];
+const DPK=[['consent','Resident data consent form'],['notice','Privacy notice displayed'],['cctvp','CCTV signage & retention limit']];
+const AREAS=['Ameerpet','Madhapur','Gachibowli','Kondapur','Dilsukhnagar'];
+const HERO={sunrise:'linear-gradient(135deg,#f472b6,#a78bfa)',lake:'linear-gradient(135deg,#38bdf8,#6366f1)',green:'linear-gradient(135deg,#34d399,#0ea5e9)',campus:'linear-gradient(135deg,#fb923c,#ef4444)',sai:'linear-gradient(135deg,#fbbf24,#f472b6)',elite:'linear-gradient(135deg,#a78bfa,#1e293b)'};
+
+/* ---------- listings ---------- */
+const lic=(o)=>Object.fromEntries(LIC.map(([k])=>[k,o[k]===undefined?{s:'none'}:typeof o[k]==='number'?{s:'have',d:o[k]}:{s:o[k]}]));
+const flags=str=>Object.fromEntries(str.split(',').filter(Boolean).map(k=>[k,1]));
+const STATIC=[
+ {id:'lake',name:'Lakeview Gents Hostel',area:'Madhapur',gender:'Men',emoji:'🏢',types:{2:{p:9000,v:3},3:{p:7000,v:5},4:{p:5500,v:2}},lic:lic({trade:200,fire:'applied',police:400}),safe:flags('cctv,reg,exit'),dp:{},food:{inc:false,extra:3500},power:'Metered, about ₹600',maint:500,deposit:2,refund:'Refund in 30 days',lock:'3 months',rules:['Gate closes 11:30 pm','No guests in rooms'],walk:'6 min to Madhapur metro (demo)',reviews:[['Verified resident · 5 months','Rooms are fine, but food costs extra and nobody explained the fire exit.']]},
+ {id:'green',name:'Green Nest Co-living',area:'Gachibowli',gender:'Co-ed (separate floors)',emoji:'🌿',types:{1:{p:16000,v:1},2:{p:11000,v:4},3:{p:9000,v:2}},lic:lic({trade:300,fire:150,building:1000,police:500,fssai:200,labour:365}),safe:flags('cctv,ext,exit,aid,reg,ward,elec'),dp:flags('consent,notice,cctvp'),food:{inc:true},power:'Included',maint:0,deposit:1,refund:'Refund in 7 days',lock:'1 month',rules:['24x7 entry with ID card','Guests in lobby only'],walk:'10 min to DLF IT park (demo)',reviews:[['Verified resident · 1 year','Everything in the agreement matched what I paid. Deposit came back in a week.']]},
+ {id:'campus',name:'Campus Stay PG',area:'Ameerpet',gender:'Men',emoji:'🎓',types:{3:{p:6500,v:6},4:{p:5000,v:4}},lic:lic({trade:'applied'}),safe:flags('cctv'),dp:{},food:{inc:false,extra:3000},power:'Metered, about ₹700',maint:800,deposit:3,refund:'Refund in 45 days',lock:'6 months',rules:['No visitors','Curfew 10 pm'],walk:'4 min to Ameerpet metro (demo)',reviews:[['Verified resident · 3 months','Cheap, but crowded. Ask to see the licence before paying.']]},
+ {id:'sai',name:"Sri Sai Women's Hostel",area:'Dilsukhnagar',gender:'Women',emoji:'🌸',types:{2:{p:8500,v:2},3:{p:6800,v:3},4:{p:5500,v:0}},lic:lic({trade:420,fire:260,building:1200,police:300,fssai:180,labour:330}),safe:flags('cctv,ext,exit,aid,reg,ward,elec'),dp:flags('consent,notice,cctvp'),food:{inc:true},power:'Included',maint:0,deposit:2,refund:'Refund in 15 days',lock:'1 month',rules:['Gate closes 10 pm (late pass allowed)','Visitors in common room'],walk:'8 min to Dilsukhnagar bus stop (demo)',reviews:[['Verified resident · 10 months','Warden is strict but my parents feel relaxed. Fire drill happens every quarter.']]},
+ {id:'elite',name:'Elite Executive Stay',area:'Kondapur',gender:'Co-ed (separate floors)',emoji:'🏙️',types:{1:{p:15000,v:2},2:{p:10500,v:3}},lic:lic({trade:500,fire:20,building:900,police:200,fssai:150}),safe:flags('cctv,ext,exit,aid,reg,ward'),dp:flags('consent,notice'),food:{inc:false,extra:4000},power:'Metered, about ₹500',maint:300,deposit:2,refund:'Refund in 15 days',lock:'2 months',rules:['Quiet hours 11 pm to 6 am','Pets not allowed'],walk:'12 min to Kondapur junction (demo)',reviews:[['Verified resident · 6 months','Clean and quiet. Fire certificate is due for renewal, owner says it is in process.']]}
+];
+function ownerState(){try{const x=JSON.parse(localStorage.getItem(OK)||'null');if(x&&x.rooms)return x}catch(e){}return seed()}
+function leads(){try{return JSON.parse(localStorage.getItem(LK)||'[]')}catch(e){return []}}
+function saveLeads(a){try{localStorage.setItem(LK,JSON.stringify(a))}catch(e){}}
+function sunrise(){
+  const o=ownerState(),types={};
+  o.rooms.forEach(r=>{const x=types[r.type]=types[r.type]||{p:r.price,v:0,total:0};x.p=Math.min(x.p,r.price);x.total+=r.type;
+    for(let b=0;b<r.type;b++)if(!o.res.find(z=>z.room===r.id&&z.bed===b))x.v++});
+  leads().filter(l=>l.pg==='sunrise'&&l.status==='reserved').forEach(l=>{if(types[l.sharing]&&types[l.sharing].v>0)types[l.sharing].v--});
+  return {id:'sunrise',live:true,name:"Sunrise Women's PG",area:'Ameerpet',gender:'Women',emoji:'🌅',types,lic:o.lic,safe:o.safe,dp:o.dp,food:{inc:true},power:'Fixed ₹300',maint:0,deposit:2,refund:'Refund in 7 days',lock:'1 month',rules:['Gate closes 10:30 pm (late pass allowed)','Visitors in common room'],walk:'5 min to Ameerpet metro (demo)',reviews:[['Verified resident · 7 months','The owner shared every document before I paid. Rent receipts come on WhatsApp.']],verifiedOn:todayLbl(-3)};
+}
+const all=()=>[sunrise(),...STATIC];
+const byId=id=>all().find(p=>p.id===id);
+function todayLbl(off){const d=new Date(Date.now()+off*864e5);return d.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}
+function score(p){
+  let tw=0,g=0;LIC.forEach(([k,,w])=>{tw+=w;const s=(p.lic[k]||{}).s;g+=w*(s==='have'?1:s==='applied'?.5:0)});
+  const l=Math.round(100*g/tw),sf=Math.round(100*SAFE.filter(([k])=>p.safe[k]).length/SAFE.length),d=Math.round(100*DPK.filter(([k])=>p.dp[k]).length/DPK.length);
+  return {lic:l,safe:sf,dp:d,total:Math.round(.5*l+.25*sf+.25*d)};
+}
+const tier=n=>n>=75?['v','✔ Verified']:n>=40?['p','◐ Partly verified']:['n','✖ Not verified'];
+const minRent=p=>Math.min(...Object.values(p.types).map(x=>x.p));
+const vacant=p=>Object.values(p.types).reduce((a,x)=>a+x.v,0);
+const allIn=(p,ty)=>{const r=p.types[ty].p;return r+(p.food.inc?0:p.food.extra)+(p.maint||0)+(/(\d+)/.test(p.power)&&!/Included/.test(p.power)?+p.power.match(/(\d[\d,]*)/)[1].replace(/,/g,''):0)};
+
+/* ---------- state ---------- */
+let S;try{S=JSON.parse(localStorage.getItem(SK)||'null')}catch(e){S=null}
+if(!S)S={view:'search',area:'',gender:'',sharing:'',max:15000,verified:false,sort:'best',saved:[],cmp:[],me:{name:'',phone:''}};
+let pid=null,modal=null;
+const save=()=>{try{localStorage.setItem(SK,JSON.stringify(S))}catch(e){}};
+function toast(m){const x=$('#toast');x.textContent=m;x.style.display='block';clearTimeout(toast.i);toast.i=setTimeout(()=>x.style.display='none',2600)}
+const myLeads=()=>leads().sort((a,b)=>b.created-a.created);
+
+/* ---------- views ---------- */
+function filtered(){
+  let l=all().filter(p=>(!S.area||p.area===S.area)&&(!S.gender||p.gender.startsWith(S.gender)||p.gender.startsWith('Co-ed'))&&(!S.sharing||p.types[S.sharing])&&(S.sharing?p.types[S.sharing].p:minRent(p))<=S.max&&(!S.verified||score(p).total>=75));
+  if(S.gender)l=l.filter(p=>p.gender.startsWith(S.gender)||p.gender.startsWith('Co-ed'));
+  const k=S.sort;l.sort((a,b)=>k==='price'?minRent(a)-minRent(b):k==='vac'?vacant(b)-vacant(a):score(b).total-score(a).total);
+  return l;
+}
+function card(p){
+  const sc=score(p),[c,l]=tier(sc.total),v=vacant(p);
+  return `<div class="card" onclick="F.open('${p.id}')" style="cursor:pointer"><div class="hero" style="background:${HERO[p.id]};height:70px">${p.emoji}</div>
+  <div class="row sp"><b>${esc(p.name)}</b><span class="badge ${c}">${l} ${sc.total}</span></div>
+  <div class="mut sm">${esc(p.area)} · ${esc(p.gender)} · ${esc(p.walk)}</div>
+  <div class="row sp" style="margin-top:6px"><span>From <b>${inr(minRent(p))}</b>/bed</span><span class="${v?'ok':'bad'} sm"><b>${v}</b> beds free${p.live?' <span class="live">● LIVE</span>':''}</span></div>
+  <div class="row wrap sm" style="margin-top:6px;gap:5px">${p.food.inc?'<span class="tag">Food included</span>':''}<span class="tag">Deposit ${p.deposit} mo</span><span class="tag">${p.refund}</span></div>
+  <div class="row" style="margin-top:8px"><button class="b s ${S.saved.includes(p.id)?'on':''}" onclick="event.stopPropagation();F.save('${p.id}')">${S.saved.includes(p.id)?'♥ Saved':'♡ Save'}</button><button class="b s ${S.cmp.includes(p.id)?'on':''}" onclick="event.stopPropagation();F.cmp('${p.id}')">${S.cmp.includes(p.id)?'✓ Comparing':'⇄ Compare'}</button></div></div>`;
+}
+function vSearch(){
+  const l=filtered();
+  return `<h1>Find your PG</h1><div class="card"><div class="chips"><button class="${!S.area?'on':''}" onclick="F.set('area','')">All areas</button>${AREAS.map(a=>`<button class="${S.area===a?'on':''}" onclick="F.set('area','${a}')">${a}</button>`).join('')}</div>
+  <div class="row wrap" style="margin-top:6px"><div class="grow"><label>I am</label><select onchange="F.set('gender',this.value)"><option value="">Any</option><option value="Women"${S.gender==='Women'?' selected':''}>Woman</option><option value="Men"${S.gender==='Men'?' selected':''}>Man</option></select></div>
+  <div class="grow"><label>Sharing</label><select onchange="F.set('sharing',this.value)"><option value="">Any</option>${[1,2,3,4].map(n=>`<option value="${n}"${+S.sharing===n?' selected':''}>${TN[n]}</option>`).join('')}</select></div>
+  <div class="grow"><label>Sort</label><select onchange="F.set('sort',this.value)"><option value="best"${S.sort==='best'?' selected':''}>Most verified</option><option value="price"${S.sort==='price'?' selected':''}>Lowest price</option><option value="vac"${S.sort==='vac'?' selected':''}>Most beds free</option></select></div></div>
+  <label>Budget per bed: up to <b>${inr(S.max)}</b></label><input type="range" min="4000" max="16000" step="500" value="${S.max}" oninput="F.max(this.value)" onchange="F.set('max',+this.value)">
+  <label class="row" style="color:inherit;font-size:14px;font-weight:500"><input type="checkbox" ${S.verified?'checked':''} onchange="F.set('verified',this.checked)"> Show only verified PGs (score 75+)</label></div>
+  <div class="mut sm" style="margin:2px 0 8px">${l.length} PGs · every score comes from real licence and safety checks, not from the owner's own claim</div>${l.length?l.map(card).join(''):'<p class="mut">No PG matches. Try a higher budget or fewer filters.</p>'}`;
+}
+function costBox(p){
+  const ty=Object.keys(p.types)[0];
+  return `<div class="card"><h2>What you will really pay each month</h2><label>Sharing</label><select id="cb_t" onchange="F.cost('${p.id}',this.value)">${Object.keys(p.types).map(k=>`<option value="${k}">${TN[k]} – ${inr(p.types[k].p)}</option>`).join('')}</select><div id="cb">${costRows(p,ty)}</div></div>`;
+}
+function costRows(p,ty){
+  const rent=p.types[ty].p,food=p.food.inc?0:p.food.extra,pw=/Included/.test(p.power)?0:+p.power.match(/(\d[\d,]*)/)[1].replace(/,/g,'');
+  return `<table><tr><td>Rent</td><td>${inr(rent)}</td></tr><tr><td>Food</td><td>${p.food.inc?'Included':inr(food)}</td></tr><tr><td>Electricity</td><td>${esc(p.power)}</td></tr><tr><td>Maintenance</td><td>${p.maint?inr(p.maint):'None'}</td></tr><tr><td><b>Monthly total</b></td><td><b>${inr(rent+food+pw+(p.maint||0))}</b></td></tr><tr><td>Deposit (one time)</td><td>${inr(rent*p.deposit)} · ${esc(p.refund)}</td></tr><tr><td>Minimum stay</td><td>${esc(p.lock)}</td></tr></table>`;
+}
+function vDetail(){
+  const p=byId(pid);if(!p){S.view='search';return vSearch()}
+  const sc=score(p),[c,l]=tier(sc.total);
+  const docs=LIC.map(([k,n])=>{const x=p.lic[k]||{s:'none'};const soon=x.s==='have'&&x.d<=60;return `<div class="ck"><span class="grow">${n}</span>${x.s==='have'?`<span class="sm ${soon?'warn':'mut'}">valid ${x.d} more days</span><span class="badge ${soon?'p':'v'}">${soon?'Renewal due':'✔ Valid'}</span>`:x.s==='applied'?'<span class="badge p">Applied</span>':'<span class="badge n">Not shown</span>'}</div>`}).join('');
+  return `<p><button class="b s" onclick="F.back()">← Results</button></p><div class="hero" style="background:${HERO[p.id]}">${p.emoji}</div>
+  <div class="row sp"><h1 style="margin:0">${esc(p.name)}</h1><span class="badge ${c}">${l} ${sc.total}</span></div>
+  <div class="mut">${esc(p.area)} · ${esc(p.gender)} · ${esc(p.walk)}</div>
+  <div class="row" style="margin:10px 0"><button class="b p grow" onclick="F.book('${p.id}')">Book a free visit</button><button class="b ${S.saved.includes(p.id)?'on':''}" onclick="F.save('${p.id}')">${S.saved.includes(p.id)?'♥':'♡'}</button><button class="b ${S.cmp.includes(p.id)?'on':''}" onclick="F.cmp('${p.id}')">⇄</button></div>
+  <div class="card"><div class="row sp"><h2>Beds available now</h2>${p.live?'<span class="live">● LIVE from the owner</span>':'<span class="mut sm">updated by owner</span>'}</div>
+  <table><tr><th>Type</th><th>Price/bed</th><th>Free beds</th></tr>${Object.entries(p.types).map(([k,x])=>`<tr><td>${TN[k]}</td><td>${inr(x.p)}</td><td class="${x.v?'ok':'bad'}"><b>${x.v}</b></td></tr>`).join('')}</table>
+  ${p.live?'<p class="mut sm" style="margin:6px 0 0">This count changes the moment the owner marks a bed in the Owner demo.</p>':''}</div>
+  ${costBox(p)}
+  <div class="card"><div class="row sp"><h2>Licences and documents</h2></div><div class="mut sm">Checked by a BunkBoard executive${p.verifiedOn?' on '+p.verifiedOn:''} · scored ${sc.lic}/100</div>${docs}</div>
+  <div class="card"><h2>Safety on site <span class="mut sm">(${sc.safe}/100)</span></h2>${SAFE.map(([k,n])=>`<div class="ck"><span class="grow">${n}</span>${p.safe[k]?'<span class="ok">✔</span>':'<span class="bad">✖</span>'}</div>`).join('')}</div>
+  <div class="card"><h2>Your data <span class="mut sm">(${sc.dp}/100)</span></h2>${DPK.map(([k,n])=>`<div class="ck"><span class="grow">${n}</span>${p.dp[k]?'<span class="ok">✔</span>':'<span class="bad">✖</span>'}</div>`).join('')}<p class="mut sm" style="margin:6px 0 0">A PG that handles your Aadhaar and CCTV footage should have these in place under the DPDP Act.</p></div>
+  <div class="card"><h2>House rules</h2>${p.rules.map(r=>`<div class="ck">• ${esc(r)}</div>`).join('')}</div>
+  <div class="card"><h2>Reviews from verified residents</h2>${p.reviews.map(r=>`<div class="ck"><div><div class="mut sm">${esc(r[0])}</div>${esc(r[1])}</div></div>`).join('')}</div>
+  <div class="priv">🔒 Your number goes only to this PG, only after you tick consent. We never sell it and brokers never see it.</div>`;
+}
+function vSaved(){
+  const l=all().filter(p=>S.saved.includes(p.id));
+  return `<h1>Saved</h1>`+(l.length?l.map(card).join(''):'<p class="mut">Tap ♡ on a PG to keep it here.</p>');
+}
+function vCompare(){
+  const l=S.cmp.map(byId).filter(Boolean);
+  if(l.length<2)return `<h1>Compare</h1><p class="mut">Pick 2 or 3 PGs with the ⇄ button on the results.</p>`+l.map(card).join('');
+  const row=(n,f)=>`<tr><td><b>${n}</b></td>${l.map(p=>`<td>${f(p)}</td>`).join('')}</tr>`;
+  const lic=(p,k)=>{const x=p.lic[k]||{s:'none'};return x.s==='have'?(x.d<=60?'<span class="warn">Renew soon</span>':'<span class="ok">✔ Valid</span>'):x.s==='applied'?'<span class="warn">Applied</span>':'<span class="bad">✖</span>'};
+  return `<h1>Compare</h1><div class="card" style="overflow-x:auto"><table><tr><th></th>${l.map(p=>`<th>${esc(p.name)}</th>`).join('')}</tr>
+  ${row('Verified score',p=>{const s=score(p);return `<span class="badge ${tier(s.total)[0]}">${s.total}</span>`})}${row('Area',p=>esc(p.area))}${row('Rent from',p=>inr(minRent(p)))}
+  ${row('Monthly total (cheapest)',p=>{const k=Object.keys(p.types).sort((a,b)=>p.types[a].p-p.types[b].p)[0];return inr(allIn(p,k))})}${row('Deposit',p=>p.deposit+' months')}${row('Refund',p=>esc(p.refund))}
+  ${row('Fire NOC',p=>lic(p,'fire'))}${row('Police registration',p=>lic(p,'police'))}${row('Trade licence',p=>lic(p,'trade'))}${row('CCTV working',p=>p.safe.cctv?'<span class="ok">✔</span>':'<span class="bad">✖</span>')}${row('Beds free',p=>vacant(p))}</table></div>
+  <p class="row">${l.map(p=>`<button class="b s grow" onclick="F.open('${p.id}')">View ${esc(p.name.split(' ')[0])}</button>`).join('')}</p>`;
+}
+const STEPS=['requested','confirmed','reserved','moved'];
+function vTrips(){
+  const ls=myLeads();
+  return `<h1>My visits and stay</h1>`+(ls.length?ls.map(l=>{
+    const p=byId(l.pg),i=l.status==='declined'?-1:STEPS.indexOf(l.status);
+    const o=ownerState(),res=l.resId&&o.res.find(r=>r.id===l.resId);
+    return `<div class="card"><div class="row sp"><b>${esc(p?p.name:l.pg)}</b><span class="tag">${esc(l.dateLabel)}, ${esc(l.slot)}</span></div>
+    <div class="mut sm">${TN[l.sharing]} · ${esc(l.name)}</div>
+    ${l.status==='declined'?'<p class="bad">The owner could not host this visit. Try another PG.</p>':`<div class="steps">${STEPS.map((s,j)=>`<i class="${j<=i?'d':''}"></i>`).join('')}</div><div class="row sp sm"><span>Requested</span><span>Visit confirmed</span><span>Bed reserved</span><span>Moved in</span></div>`}
+    ${l.status==='requested'?`<p class="mut sm">Waiting for the owner to confirm.${l.pg!=='sunrise'?` <button class="b s" onclick="F.sim('${l.id}')">Demo: owner confirms</button>`:' Open the Owner demo → Enquiries to confirm it.'}</p>`:''}
+    ${l.status==='confirmed'?`<p>The owner confirmed your visit. Like it? Hold your bed for 24 hours.</p><button class="b p" onclick="F.reserve('${l.id}')">Reserve bed · ${inr(1000)} token</button><p class="mut sm">Token is adjusted against your first month. Refundable if you decide not to join within 24 hours.</p>`:''}
+    ${l.status==='reserved'?`<p class="ok"><b>Bed held for you.</b> ${l.pg==='sunrise'?'Owner will assign your bed on move-in day.':''}</p>${l.pg!=='sunrise'?`<button class="b s" onclick="F.sim('${l.id}')">Demo: owner marks moved in</button>`:''}`:''}
+    ${l.status==='moved'?`<div class="priv" style="margin-top:8px">🎉 Welcome${l.roomLabel?' to Room '+l.roomLabel:''}.${res?` Rent this month: <b>${inr(res.rent)}</b> · ${res.cash+res.upi>=res.rent?'<span class="ok"><b>Paid</b></span>':'<b>Due</b>'}`:''}</div>
+    ${res&&res.cash+res.upi<res.rent?`<p><button class="b p" onclick="F.payRent('${l.id}')">Pay rent by UPI (demo)</button></p>`:res?'<p class="mut sm">Receipt sent to your WhatsApp. Your owner sees this payment instantly.</p>':''}`:''}</div>`}).join(''):'<p class="mut">Book a visit from any PG page and follow it here, all the way to move-in.</p>');
+}
+function vWhy(){
+  return `<h1>Why BunkBoard Finder</h1>
+  <div class="card"><h2>What PG seekers deal with today</h2>
+  <div class="ck">• Hidden charges and broker fees surface only after the visit (reported by Telangana Today for Hyderabad's IT corridor).</div>
+  <div class="ck">• Many tenants no longer trust online listings: misleading photos, doubtful reviews, extra charges (InstaDwell study via PropNews Time).</div>
+  <div class="ck">• Safety is hard to check. In Hyderabad police inspections of 446 hostels, over 30% of the CCTV cameras were not working (Deccan Chronicle).</div>
+  <div class="ck">• Police have asked PGs to keep resident records, working CCTV and licences: trade, FSSAI, labour, fire NOC and building approval (Cyberabad police, Feb 2026, via Newsmeter).</div>
+  <div class="ck">• Fake PG listings are common enough that Hyderabad police have warned renters to verify before paying (Deccan Chronicle).</div></div>
+  <div class="card"><h2>What we do differently</h2>
+  <div class="ck"><b>1</b><span>A <b>verified score</b> built from the PG's real licences, expiry dates and safety checks, not just photos and stars.</span></div>
+  <div class="ck"><b>2</b><span><b>Live bed-level vacancy.</b> The owner taps a bed, the seeker sees it. No “sorry, already given” calls.</span></div>
+  <div class="ck"><b>3</b><span><b>True monthly cost</b> upfront: rent, food, electricity, maintenance, deposit and refund time.</span></div>
+  <div class="ck"><b>4</b><span><b>Your number is not resold.</b> It goes to one PG, with your consent, and stays hidden from the owner until they confirm your visit.</span></div>
+  <div class="ck"><b>5</b><span><b>One flow:</b> search, compare, visit, reserve, move in, pay rent. The owner sees every step in their own dashboard.</span></div>
+  <div class="ck"><b>6</b><span>Reviews only from <b>verified residents</b>.</span></div></div>
+  <div class="card"><h2>Try the full flow (2 minutes)</h2><ol style="padding-left:18px;margin:0"><li>Open <b>Sunrise Women's PG</b> and read its verified score.</li><li>Tap <b>Book a free visit</b>.</li><li>Open the <a href="owner-demo.html" target="_blank" rel="noopener">Owner demo</a> → <b>Enquiries</b> → Confirm visit.</li><li>Come back here → <b>My visits</b> → Reserve bed.</li><li>In the Owner demo, tap <b>Move in</b>. Then pay rent here and watch it turn Paid in the Owner demo.</li></ol>
+  <p class="mut sm">Run both pages in the same browser. They share data on this device only.</p></div>
+  <p class="mut sm">Sources: telanganatoday.com, propnewstime.com, deccanchronicle.com, newsmeter.in. Check these against the originals before using them in a sales deck.</p>`;
+}
+function vModal(){
+  if(!modal)return '';
+  const p=byId(modal.pg);
+  const days=Array.from({length:7},(_,i)=>{const d=new Date(Date.now()+(i+1)*864e5);return d.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'})});
+  return `<div class="ov" onclick="if(event.target===this)F.close()"><div class="md"><h2>Book a free visit · ${esc(p.name)}</h2>
+  <label>Your name</label><input id="b_n" value="${esc(S.me.name)}"><label>Mobile</label><input id="b_p" type="tel" inputmode="tel" value="${esc(S.me.phone)}">
+  <div class="row wrap"><div class="grow"><label>Sharing</label><select id="b_t">${Object.keys(p.types).map(k=>`<option value="${k}">${TN[k]} – ${inr(p.types[k].p)}</option>`).join('')}</select></div><div class="grow"><label>Day</label><select id="b_d">${days.map(d=>`<option>${d}</option>`).join('')}</select></div><div class="grow"><label>Time</label><select id="b_s"><option>Morning</option><option>Afternoon</option><option>Evening</option></select></div></div>
+  <label class="row" style="color:inherit;font-size:13px;font-weight:400;margin-top:12px;align-items:flex-start"><input id="b_c" type="checkbox"> <span>I agree that BunkBoard shares my name and mobile number only with <b>${esc(p.name)}</b> for this visit. They will see my number after they confirm. I can withdraw consent any time.</span></label>
+  <p class="row"><button class="b p grow" onclick="F.send()">Send request</button><button class="b" onclick="F.close()">Cancel</button></p></div></div>`;
+}
+const NAV=[['search','🔍','Search'],['saved','♥','Saved'],['compare','⇄','Compare'],['trips','🗓','My visits'],['why','★','Why us']];
+function render(){
+  let v;try{v={search:vSearch,detail:vDetail,saved:vSaved,compare:vCompare,trips:vTrips,why:vWhy}[S.view]()}catch(e){v='<p class="bad">'+esc(e.message)+'</p>'}
+  const cur=S.view==='detail'?'search':S.view;
+  const n={saved:S.saved.length,compare:S.cmp.length,trips:myLeads().length};
+  $('#app').innerHTML=v+vModal()+`<nav><div>${NAV.map(([k,i,t])=>`<button class="${cur===k?'on':''}" onclick="F.go('${k}')">${i}<br>${t}${n[k]?' ('+n[k]+')':''}</button>`).join('')}</div></nav>`;
+}
+
+/* ---------- actions ---------- */
+const F={
+  go(v){S.view=v;modal=null;save();render();window.scrollTo(0,0)},
+  open(id){pid=id;S.view='detail';save();render();window.scrollTo(0,0)},back(){S.view='search';render()},
+  set(k,v){S[k]=v;save();render()},max(v){S.max=+v;const b=document.querySelector('label b');if(b)b.textContent=inr(v)},
+  save(id){const i=S.saved.indexOf(id);i>=0?S.saved.splice(i,1):S.saved.push(id);save();render()},
+  cmp(id){const i=S.cmp.indexOf(id);if(i>=0)S.cmp.splice(i,1);else{if(S.cmp.length>=3)return toast('Compare up to 3 PGs');S.cmp.push(id)}save();render()},
+  cost(id,ty){$('#cb').innerHTML=costRows(byId(id),ty)},
+  book(id){modal={pg:id};render()},close(){modal=null;render()},
+  send(){
+    const n=$('#b_n').value.trim(),ph=$('#b_p').value.replace(/\D/g,'').slice(-10);
+    if(!n)return toast('Enter your name');if(ph.length!==10)return toast('Enter a 10-digit mobile number');
+    if(!$('#b_c').checked)return toast('Please tick the consent box');
+    S.me={name:n,phone:ph};save();
+    const a=leads();a.push({id:'L'+Date.now().toString(36),pg:modal.pg,name:n,phone:ph,sharing:+$('#b_t').value,dateLabel:$('#b_d').value,slot:$('#b_s').value,status:'requested',created:Date.now(),consent:true});
+    saveLeads(a);modal=null;S.view='trips';save();render();toast('Request sent');
+  },
+  sim(id){const a=leads(),l=a.find(x=>x.id===id);if(!l)return;l.status=STEPS[Math.min(STEPS.indexOf(l.status)+1,3)];if(l.status==='moved')l.roomLabel='(demo)';saveLeads(a);render()},
+  reserve(id){modal=null;const a=leads(),l=a.find(x=>x.id===id);if(!l)return;l.status='reserved';l.token=1000;saveLeads(a);render();toast('₹1,000 token paid (demo). Bed held.')},
+  payRent(id){
+    const l=leads().find(x=>x.id===id);if(!l||!l.resId)return;
+    try{const o=JSON.parse(localStorage.getItem(OK)||'null');if(!o)return;const r=o.res.find(x=>x.id===l.resId);if(!r)return;r.upi=Math.max(0,r.rent-r.cash);r.late=false;localStorage.setItem(OK,JSON.stringify(o))}catch(e){}
+    render();toast('Rent paid by UPI (demo). Owner dashboard updated.');
+  },
+  reset(){try{localStorage.removeItem(SK);localStorage.removeItem(LK)}catch(e){}S=null;location.reload()}
+};
+window.F=F;
+window.addEventListener('focus',render);
+render();
+</script>
+</body>
+</html>
