@@ -119,7 +119,7 @@ function authScreen(msg){
   ${m==='up'?`<label>Invite code (from your manager)</label><input id="a_inv" value="${esc(invite)}" autocapitalize="none">
   <p class="mut sm">Setting up the very first account? Leave the invite code empty – you become the admin.</p>`:''}
   <p><button class="p" style="width:100%" onclick="A.auth()">${m==='in'?'Sign in':m==='up'?'Sign up':m==='forgot'?'Send reset link':'Save password'}</button></p>
-  <p class="mut sm">${m==='in'?`<a href="#" onclick="A.mode('up');return false">Create account</a> · <a href="#" onclick="A.mode('forgot');return false">Forgot password?</a>`:`<a href="#" onclick="A.mode('in');return false">Back to sign in</a>`}</p>
+  <p class="sm"><a href="owner-demo.html">▶ See the owner demo (no login)</a></p><p class="mut sm">${m==='in'?`<a href="#" onclick="A.mode('up');return false">Create account</a> · <a href="#" onclick="A.mode('forgot');return false">Forgot password?</a>`:`<a href="#" onclick="A.mode('in');return false">Back to sign in</a>`}</p>
   </div></div>`;
 }
 async function doAuth(){
@@ -385,7 +385,8 @@ function exportCsv(){
 }
 function vMore(){
   return `<h1>More</h1><div class="card"><b>${esc(me.full_name||me.email)}</b><div class="mut sm">${esc(me.email)} · ${me.role==='admin'?'Admin':'Sales rep'}</div></div>
-  <div class="card"><button style="width:100%;margin-bottom:8px" onclick="A.go('refs')">🔗 Referrals</button>
+  <div class="card"><a href="owner-demo.html" target="_blank" rel="noopener"><button style="width:100%;margin-bottom:8px">🏠 Show owner demo to a PG owner</button></a>
+  <button style="width:100%;margin-bottom:8px" onclick="A.go('refs')">🔗 Referrals</button>
   <button style="width:100%;margin-bottom:8px" onclick="A.csv()">⬇️ Export clients to Excel/CSV</button>
   ${isAdmin()?`<button style="width:100%;margin-bottom:8px" onclick="A.go('team')">👥 Team & invite code</button>`:''}
   <button style="width:100%;margin-bottom:8px" onclick="A.refresh()">🔄 Refresh data</button>

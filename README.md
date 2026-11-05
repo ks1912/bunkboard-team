@@ -43,6 +43,10 @@ Then, in Supabase **Authentication → URL Configuration**, set **Site URL** to 
 
 A rep adding a PG whose owner phone already exists with another rep gets a warning (not the other rep's data, only name/area/rep/stage).
 
+## Owner demo (to show PG owners)
+
+Open `owner-demo.html` (link on the sign-in screen and under More). It needs no login and stores nothing in the database: a fictional 5-floor, 26-room, 78-bed PG with 1/2/3/4-sharing rooms, residents, rent collection (cash/UPI), reminders, staff salaries and a compliance score. English, Telugu and Hindi. "Reset demo" restores it.
+
 ## Notes and limits
 
 - Needs internet; there is no offline mode.

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1F6F5C">
+<title>BunkBoard – Owner Demo</title>
+<link rel="icon" href="icon.svg">
+<style>
+:root{--pri:#1F6F5C;--pri2:#16513F;--bg:#F5F7F6;--card:#fff;--line:#DDE3E1;--ink:#1B2321;--mut:#667169;--bad:#C0392B;--warn:#B45309;--ok:#1F6F5C}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.top{background:var(--pri);color:#fff;padding:10px 14px;position:sticky;top:0;z-index:5}
+.top .r{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.top b{font-size:16px}.top small{opacity:.85;display:block;font-size:12px}
+.top select,.top button{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:6px;padding:5px 8px;font-size:12px}
+.top select option{color:#000}
+.demo{background:#FEF3C7;color:#92400E;text-align:center;font-size:12px;padding:4px}
+#app{max-width:760px;margin:0 auto;padding:12px 12px 40px}
+.tabs{display:flex;gap:2px;overflow-x:auto;border-bottom:1px solid var(--line);margin-bottom:12px;background:var(--bg);position:sticky;top:52px;z-index:4}
+.tab{padding:10px 12px;white-space:nowrap;font-weight:600;font-size:14px;color:var(--mut);border:0;border-bottom:2px solid transparent;background:none;cursor:pointer}
+.tab.on{color:var(--pri);border-bottom-color:var(--pri)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+h2{font-size:16px;margin:0 0 8px}h3{font-size:13px;margin:10px 0 6px;color:var(--mut)}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px}
+@media(min-width:560px){.kpis{grid-template-columns:repeat(4,1fr)}}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px}.kpi b{display:block;font-size:21px}.kpi span{font-size:12px;color:var(--mut)}
+.row{display:flex;gap:8px;align-items:center}.sp{justify-content:space-between}.wrap{flex-wrap:wrap}.grow{flex:1}
+.mut{color:var(--mut);font-size:13px}.sm{font-size:12px}
+button.b{font:inherit;border-radius:8px;padding:8px 12px;cursor:pointer;border:1.5px solid var(--pri);background:#fff;color:var(--pri);font-weight:600}
+button.b.p{background:var(--pri);color:#fff}button.b.d{border-color:var(--bad);color:var(--bad)}button.b.armed{background:var(--bad);color:#fff}
+button.b.s{padding:5px 9px;font-size:13px}
+input,select{font:inherit;width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+label{display:block;font-size:12px;font-weight:600;color:var(--mut);margin:8px 0 3px}
+.bar{height:10px;border-radius:5px;background:#E8EDEB;overflow:hidden}.bar i{display:block;height:100%;background:var(--pri)}
+.floor{border:1px solid var(--line);border-radius:10px;margin-bottom:10px;background:#fff}
+.floor>.h{padding:10px 12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-weight:700}
+.floor>.c{padding:0 12px 10px}
+.rm{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-top:1px solid #EEF1F0;flex-wrap:wrap}
+.beds{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+.bed{padding:7px 10px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid;user-select:none}
+.bed.v{background:#E3F3EE;color:var(--ok);border-color:var(--ok)}.bed.o{background:#FBE9E7;color:var(--bad);border-color:var(--bad)}
+.chip{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700}
+.chip.paid{background:#E3F3EE;color:var(--ok)}.chip.due{background:#FEF3C7;color:var(--warn)}.chip.overdue{background:#FDECEA;color:var(--bad)}.chip.t{background:#EEF2F7;color:#334155}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.md{background:#fff;width:100%;max-width:520px;border-radius:14px 14px 0 0;padding:16px;max-height:90vh;overflow:auto}
+@media(min-width:560px){.ov{align-items:center}.md{border-radius:14px}}
+pre{white-space:pre-wrap;background:#F3F4F6;padding:10px;border-radius:8px;font:13px/1.4 inherit;margin:6px 0}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:#111827;color:#fff;padding:9px 14px;border-radius:8px;z-index:30;display:none}
+.ck{display:flex;gap:8px;align-items:center;padding:7px 0;border-top:1px solid #EEF1F0}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+</style>
+</head>
+<body>
+<div class="top"><div class="r"><div><b id="pgname"></b><small id="pgsub"></small></div>
+<div class="row"><select id="lang" onchange="D.lang(this.value)"><option value="en">English</option><option value="te">తెలుగు</option><option value="hi">हिन्दी</option></select><button onclick="D.reset()" id="rst"></button></div></div></div>
+<div class="demo" id="demo"></div>
+<div id="app"></div>
+<div id="toast"></div>
+<script>
+'use strict';
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const inr=n=>'₹'+Number(n||0).toLocaleString('en-IN');
+const $=s=>document.querySelector(s);
+const KEY='bunkboard-owner-demo-v1';
+const PG={name:"Sunrise Women's PG",area:'Ameerpet, Hyderabad'};
+const MONTH=new Date().toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+
+/* ---------- translations ---------- */
+const L={
+en:{demo:'DEMO – all names, numbers and rooms are fictional',reset:'Reset demo',
+tOverview:'Overview',tRooms:'Rooms',tVacancy:'Beds',tRes:'Residents',tStaff:'Staff',tComp:'Compliance',
+occ:'Occupancy',collected:'Collected',pending:'Pending',vacantBeds:'Vacant beds',overdue:'Overdue',byFloor:'Floor-wise occupancy',floor:'Floor',rooms:'rooms',beds:'beds',
+sharing:'Sharing',single:'Single',double:'2-sharing',triple:'3-sharing',quad:'4-sharing',perBed:'/bed',room:'Room',
+quickAdd:'Quick add rooms',count:'How many rooms',price:'Price per bed ₹',generate:'Add rooms',addFloor:'+ Add floor',del:'Delete',
+blocked:'Room has residents. Vacate its beds first.',tapBed:'Tap a green bed to add a resident, a red bed to see who stays.',
+name:'Name',phone:'Phone',addRes:'Add resident',cancel:'Cancel',vacate:'Vacate bed',tapAgain:'Tap again to confirm',
+rent:'Monthly rent',paidL:'Paid',dueL:'Due',markPaid:'Mark paid',cash:'Cash ₹',upi:'UPI ₹',confirm:'Confirm',
+remind:'Remind',remindAll:'Remind all overdue / due',reminded:'Reminder sent ✓',none:'Nothing here yet.',
+msgLabel:'Message (one message goes to everyone)',copy:'Copy message',copied:'Copied',markSent:'Mark all as sent',
+sendWa:'Open WhatsApp',role:'Role',salary:'Salary',salaryPaid:'Salary paid',markSalary:'Mark paid',addStaff:'+ Add staff',remove:'Remove',
+licences:'Licences',safety:'Safety on site',dpdp:'Data privacy (DPDP)',score:'Compliance score',expires:'expires',inDays:'in {n} days',have:'Valid',applied:'Applied',missing:'Missing',
+renewSoon:'Renew soon',cta:'Want your PG set up like this? Ask your BunkBoard executive for a free check.',
+dueMsg:'Hi {name}, this is a reminder that rent of {amt} for {month} (Room {room}, {pg}) is pending. Please pay by UPI or cash. Thank you.',
+trade:'GHMC trade licence',fire:'Fire NOC / mitigation certificate',building:'Building use permission',police:'Police registration & resident records',fssai:'FSSAI (food)',labour:'Labour licence',
+cctv:'CCTV at entrances & corridors',ext:'Fire extinguishers serviced',exit:'Emergency exits clear',aid:'First-aid kit',reg:'Visitor register',ward:'Warden / night security',elec:'Electrical wiring checked',
+consent:'Consent form for resident data',notice:'Privacy notice displayed',cctvp:'CCTV signage & retention limit',
+totalBeds:'Total beds',late:'late'},
+te:{demo:'డెమో – పేర్లు, నంబర్లు, గదులు అన్నీ కల్పితం',reset:'రీసెట్',
+tOverview:'సారాంశం',tRooms:'గదులు',tVacancy:'బెడ్స్',tRes:'నివాసితులు',tStaff:'సిబ్బంది',tComp:'నిబంధనలు',
+occ:'ఆక్యుపెన్సీ',collected:'వసూలైనది',pending:'బాకీ',vacantBeds:'ఖాళీ బెడ్స్',overdue:'గడువు దాటినవి',byFloor:'అంతస్తుల వారీగా',floor:'అంతస్తు',rooms:'గదులు',beds:'బెడ్స్',
+sharing:'షేరింగ్',single:'సింగిల్',double:'2 షేరింగ్',triple:'3 షేరింగ్',quad:'4 షేరింగ్',perBed:'/బెడ్',room:'గది',
+quickAdd:'గదులు త్వరగా జోడించండి',count:'ఎన్ని గదులు',price:'బెడ్ ధర ₹',generate:'గదులు జోడించు',addFloor:'+ అంతస్తు జోడించు',del:'తొలగించు',
+blocked:'ఈ గదిలో నివాసితులు ఉన్నారు. ముందు బెడ్స్ ఖాళీ చేయండి.',tapBed:'ఆకుపచ్చ బెడ్ నొక్కి నివాసిని చేర్చండి, ఎరుపు బెడ్ నొక్కి వివరాలు చూడండి.',
+name:'పేరు',phone:'ఫోన్',addRes:'నివాసిని చేర్చు',cancel:'రద్దు',vacate:'బెడ్ ఖాళీ చేయి',tapAgain:'నిర్ధారించడానికి మళ్లీ నొక్కండి',
+rent:'నెల అద్దె',paidL:'చెల్లించారు',dueL:'బాకీ',markPaid:'చెల్లించినట్లు',cash:'నగదు ₹',upi:'UPI ₹',confirm:'నిర్ధారించు',
+remind:'గుర్తు చేయి',remindAll:'బాకీ ఉన్నవారందరికీ గుర్తు చేయి',reminded:'రిమైండర్ పంపారు ✓',none:'ఇంకా ఏమీ లేదు.',
+msgLabel:'సందేశం (అందరికీ ఒకేసారి)',copy:'సందేశం కాపీ',copied:'కాపీ అయింది',markSent:'అందరికీ పంపినట్లు గుర్తు',
+sendWa:'WhatsApp తెరువు',role:'పని',salary:'జీతం',salaryPaid:'జీతం చెల్లించారు',markSalary:'చెల్లించినట్లు',addStaff:'+ సిబ్బందిని చేర్చు',remove:'తొలగించు',
+licences:'లైసెన్సులు',safety:'భద్రత',dpdp:'డేటా గోప్యత (DPDP)',score:'నిబంధనల స్కోరు',expires:'గడువు',inDays:'{n} రోజుల్లో',have:'చెల్లుబాటు',applied:'దరఖాస్తు చేశారు',missing:'లేదు',
+renewSoon:'త్వరలో రెన్యూవల్',cta:'మీ PGని ఇలా సెట్ చేయాలా? BunkBoard ప్రతినిధిని ఉచిత చెక్ కోసం అడగండి.',
+dueMsg:'నమస్కారం {name} గారు, {month} నెల అద్దె {amt} ({pg}, గది {room}) బాకీ ఉంది. దయచేసి UPI లేదా నగదుతో చెల్లించండి. ధన్యవాదాలు.',
+trade:'GHMC ట్రేడ్ లైసెన్స్',fire:'ఫైర్ NOC',building:'బిల్డింగ్ వినియోగ అనుమతి',police:'పోలీస్ రిజిస్ట్రేషన్',fssai:'FSSAI (ఆహారం)',labour:'లేబర్ లైసెన్స్',
+cctv:'ప్రవేశాల వద్ద CCTV',ext:'ఫైర్ ఎక్స్టింగ్విషర్ సర్వీస్',exit:'అత్యవసర ద్వారాలు ఖాళీ',aid:'ఫస్ట్ ఎయిడ్ కిట్',reg:'సందర్శకుల రిజిస్టర్',ward:'వార్డెన్ / రాత్రి సెక్యూరిటీ',elec:'ఎలక్ట్రికల్ తనిఖీ',
+consent:'నివాసి డేటా సమ్మతి పత్రం',notice:'గోప్యతా నోటీసు ప్రదర్శన',cctvp:'CCTV సైన్ & నిల్వ పరిమితి',
+totalBeds:'మొత్తం బెడ్స్',late:'ఆలస్యం'},
+hi:{demo:'डेमो – सभी नाम, नंबर और कमरे काल्पनिक हैं',reset:'रीसेट',
+tOverview:'सारांश',tRooms:'कमरे',tVacancy:'बेड',tRes:'निवासी',tStaff:'स्टाफ',tComp:'अनुपालन',
+occ:'ऑक्यूपेंसी',collected:'वसूल',pending:'बकाया',vacantBeds:'खाली बेड',overdue:'लेट',byFloor:'मंज़िल के अनुसार',floor:'मंज़िल',rooms:'कमरे',beds:'बेड',
+sharing:'शेयरिंग',single:'सिंगल',double:'2 शेयरिंग',triple:'3 शेयरिंग',quad:'4 शेयरिंग',perBed:'/बेड',room:'कमरा',
+quickAdd:'कमरे जल्दी जोड़ें',count:'कितने कमरे',price:'प्रति बेड कीमत ₹',generate:'कमरे जोड़ें',addFloor:'+ मंज़िल जोड़ें',del:'हटाएं',
+blocked:'इस कमरे में निवासी हैं। पहले बेड खाली करें।',tapBed:'निवासी जोड़ने के लिए हरे बेड पर, देखने के लिए लाल बेड पर टैप करें।',
+name:'नाम',phone:'फोन',addRes:'निवासी जोड़ें',cancel:'रद्द',vacate:'बेड खाली करें',tapAgain:'पुष्टि के लिए फिर टैप करें',
+rent:'मासिक किराया',paidL:'चुकाया',dueL:'बकाया',markPaid:'भुगतान दर्ज करें',cash:'नकद ₹',upi:'UPI ₹',confirm:'पुष्टि',
+remind:'याद दिलाएं',remindAll:'सभी बकाया को याद दिलाएं',reminded:'रिमाइंडर भेजा ✓',none:'अभी कुछ नहीं।',
+msgLabel:'संदेश (सबको एक साथ)',copy:'संदेश कॉपी',copied:'कॉपी हो गया',markSent:'सबको भेजा गया दर्ज करें',
+sendWa:'WhatsApp खोलें',role:'काम',salary:'वेतन',salaryPaid:'वेतन चुकाया',markSalary:'चुकाया दर्ज करें',addStaff:'+ स्टाफ जोड़ें',remove:'हटाएं',
+licences:'लाइसेंस',safety:'सुरक्षा',dpdp:'डेटा प्राइवेसी (DPDP)',score:'अनुपालन स्कोर',expires:'समाप्ति',inDays:'{n} दिन में',have:'वैध',applied:'आवेदन किया',missing:'नहीं है',
+renewSoon:'जल्द नवीनीकरण',cta:'अपना PG ऐसे सेट करवाना है? मुफ़्त जांच के लिए BunkBoard प्रतिनिधि से पूछें।',
+dueMsg:'नमस्ते {name}, {month} का किराया {amt} ({pg}, कमरा {room}) बकाया है। कृपया UPI या नकद से भुगतान करें। धन्यवाद।',
+trade:'GHMC ट्रेड लाइसेंस',fire:'फायर NOC',building:'बिल्डिंग उपयोग अनुमति',police:'पुलिस रजिस्ट्रेशन',fssai:'FSSAI (भोजन)',labour:'लेबर लाइसेंस',
+cctv:'प्रवेश पर CCTV',ext:'फायर एक्सटिंग्विशर सर्विस',exit:'आपातकालीन निकास खाली',aid:'फर्स्ट-एड किट',reg:'आगंतुक रजिस्टर',ward:'वार्डन / रात्रि सुरक्षा',elec:'बिजली वायरिंग जांच',
+consent:'निवासी डेटा सहमति फॉर्म',notice:'प्राइवेसी नोटिस',cctvp:'CCTV साइन और रिटेंशन सीमा',
+totalBeds:'कुल बेड',late:'देरी'}
+};
+const TYPE_KEY={1:'single',2:'double',3:'triple',4:'quad'};
+const PRICE={1:14000,2:9500,3:7500,4:6000};
+const LIC=[['trade',3],['fire',3],['building',2],['police',2],['fssai',2],['labour',1]];
+const SAFE=['cctv','ext','exit','aid','reg','ward','elec'];
+const DP=['consent','notice','cctvp'];
+
+/* ---------- seed data ---------- */
+function seed(){
+  // 5 floors: 6,6,6,4,4 rooms -> 2 single, 5 double, 10 triple, 9 quad (26 rooms, 78 beds)
+  const plan=[[4,4,4,3,3,3],[4,4,4,3,3,3],[4,4,4,3,3,3],[3,2,2,2],[1,1,2,2]];
+  const rooms=[];
+  plan.forEach((types,fi)=>types.forEach((t,i)=>rooms.push({id:(fi+1)*100+i+1,floor:fi+1,type:t,price:PRICE[t]})));
+  let s=7;const rnd=()=>(s=(s*16807)%2147483647)/2147483647;
+  const F=['Priya','Ananya','Sneha','Divya','Meghana','Kavya','Lakshmi','Pooja','Harini','Swathi','Nikitha','Bhavana','Ramya','Sirisha','Tejaswini','Anusha','Keerthi','Manasa','Sowmya','Pavani','Aishwarya','Neha','Shruti','Vaishnavi'];
+  const Lh=['Reddy','Sharma','Naidu','Rao','Kumari','Goud','Patel','Singh','Iyer','Verma','Varma','Chowdary'];
+  const res=[];let id=1,n=0;
+  rooms.forEach(r=>{for(let b=0;b<r.type;b++){
+    if(rnd()<0.74){
+      const roll=rnd(),late=roll>.8;let cash=0,upi=0;
+      if(roll<.55){const u=rnd()<.7;if(u)upi=r.price;else cash=r.price}
+      else if(roll<.62){upi=Math.round(r.price/2)}
+      res.push({id:id++,name:F[n%F.length]+' '+Lh[(n*5+3)%Lh.length],phone:'9000'+String(10000+n*37).slice(-5)+'1',room:r.id,bed:b,rent:r.price,cash,upi,late:late&&cash+upi<r.price,sent:false});
+      n++;
+    }}});
+  const staff=[{id:1,name:'Saroja',role:'Cook',salary:18000,paid:true},{id:2,name:'Mallesh',role:'Cleaner',salary:12000,paid:true},{id:3,name:'Rukmini',role:'Cleaner',salary:12000,paid:false},{id:4,name:'Bhaskar',role:'Security',salary:15000,paid:false}];
+  const lic={trade:{s:'have',d:140},fire:{s:'have',d:24},building:{s:'have',d:900},police:{s:'applied'},fssai:{s:'have',d:300},labour:{s:'none'}};
+  return {lang:'en',tab:'overview',open:{1:true},rooms,res,staff,lic,safe:{cctv:1,ext:1,exit:1,aid:1,reg:1,ward:0,elec:0},dp:{consent:0,notice:0,cctvp:0},nextRes:id,nextStaff:5,nextRoom:900};
+}
+let S;try{S=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){S=null}
+if(!S||!S.rooms)S=seed();
+let modal=null,armed=null,sentAll=false;
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+const t=k=>(L[S.lang]&&L[S.lang][k])||L.en[k]||k;
+function toast(m){const x=$('#toast');x.textContent=m;x.style.display='block';clearTimeout(toast.i);toast.i=setTimeout(()=>x.style.display='none',2200)}
+
+/* ---------- derived ---------- */
+const roomOf=id=>S.rooms.find(r=>r.id===id);
+const resAt=(rid,b)=>S.res.find(x=>x.room===rid&&x.bed===b);
+const due=r=>Math.max(0,r.rent-r.cash-r.upi);
+const stat=r=>due(r)<=0?'paid':r.late?'overdue':'due';
+const floors=()=>[...new Set(S.rooms.map(r=>r.floor))].sort((a,b)=>a-b);
+function totals(){
+  const beds=S.rooms.reduce((a,r)=>a+r.type,0),occ=S.res.length;
+  return {beds,occ,vac:beds-occ,col:S.res.reduce((a,r)=>a+r.cash+r.upi,0),pend:S.res.reduce((a,r)=>a+due(r),0),over:S.res.filter(r=>stat(r)==='overdue').length};
+}
+function score(){
+  let tw=0,g=0;LIC.forEach(([k,w])=>{tw+=w;const s=S.lic[k]&&S.lic[k].s;g+=w*(s==='have'?1:s==='applied'?.5:0)});
+  const lic=Math.round(100*g/tw),safe=Math.round(100*SAFE.filter(k=>S.safe[k]).length/SAFE.length),dp=Math.round(100*DP.filter(k=>S.dp[k]).length/DP.length);
+  return {lic,safe,dp,total:Math.round(.5*lic+.25*safe+.25*dp)};
+}
+const sc=n=>n>=75?'ok':n>=40?'warn':'bad';
+const typeName=ty=>t(TYPE_KEY[ty]||'quad');
+
+/* ---------- views ---------- */
+function vOverview(){
+  const T=totals(),s=score(),pct=Math.round(100*T.occ/(T.beds||1));
+  return `<div class="kpis"><div class="kpi"><b>${pct}%</b><span>${t('occ')} (${T.occ}/${T.beds})</span></div><div class="kpi"><b>${inr(T.col)}</b><span>${t('collected')}</span></div><div class="kpi"><b>${inr(T.pend)}</b><span>${t('pending')}</span></div><div class="kpi"><b>${T.vac}</b><span>${t('vacantBeds')}</span></div></div>
+  <div class="card"><h2>${t('byFloor')}</h2>${floors().map(f=>{const rs=S.rooms.filter(r=>r.floor===f),b=rs.reduce((a,r)=>a+r.type,0),o=S.res.filter(x=>roomOf(x.room)&&roomOf(x.room).floor===f).length;return `<div class="row" style="margin:6px 0"><span style="width:84px" class="sm">${t('floor')} ${f}</span><div class="bar grow"><i style="width:${100*o/(b||1)}%"></i></div><b class="sm" style="width:52px;text-align:right">${o}/${b}</b></div>`}).join('')}</div>
+  <div class="card"><div class="row sp"><h2>${t('score')}</h2><b class="${sc(s.total)}" style="font-size:22px">${s.total}/100</b></div><div class="bar"><i style="width:${s.total}%;background:var(--${sc(s.total)==='ok'?'ok':sc(s.total)==='warn'?'warn':'bad'})"></i></div>
+  <p class="mut sm" style="margin:6px 0 0">${t('licences')} ${s.lic} · ${t('safety')} ${s.safe} · ${t('dpdp')} ${s.dp}</p><p><button class="b s" onclick="D.tab('compliance')">${t('tComp')} →</button></p></div>
+  <div class="card"><div class="row sp"><span>${t('overdue')}</span><b class="bad">${T.over}</b></div><p style="margin:8px 0 0"><button class="b s" onclick="D.tab('residents')">${t('tRes')} →</button></p></div>
+  <p class="mut sm" style="text-align:center">${t('cta')}</p>`;
+}
+function vRooms(){
+  const sums=[1,2,3,4].map(ty=>S.rooms.filter(r=>r.type===ty).length);
+  let h=`<div class="card"><h2>${S.rooms.length} ${t('rooms')} · ${totals().beds} ${t('beds')}</h2><div class="row wrap sm">${[1,2,3,4].map((ty,i)=>`<span class="chip t">${typeName(ty)}: ${sums[i]}</span>`).join('')}</div></div>`;
+  h+=floors().map(f=>{
+    const rs=S.rooms.filter(r=>r.floor===f).sort((a,b)=>a.id-b.id),open=S.open[f];
+    return `<div class="floor"><div class="h" onclick="D.fl(${f})"><span>${t('floor')} ${f} <span class="mut sm">· ${rs.length} ${t('rooms')}</span></span><span>${open?'▲':'▼'}</span></div>${open?`<div class="c">${rs.map(r=>`<div class="rm"><div><b>${t('room')} ${r.id}</b> <span class="chip t">${typeName(r.type)}</span><div class="mut sm">${r.type} ${t('beds')} · ${inr(r.price)}${t('perBed')}</div></div><button class="b d s ${armed==='r'+r.id?'armed':''}" onclick="D.delRoom(${r.id})">${armed==='r'+r.id?t('tapAgain'):t('del')}</button></div>`).join('')}</div>`:''}</div>`;
+  }).join('');
+  h+=`<div class="card"><h2>${t('quickAdd')}</h2><div class="row wrap"><div class="grow"><label>${t('floor')}</label><select id="q_f">${floors().map(f=>`<option>${f}</option>`).join('')}</select></div><div class="grow"><label>${t('sharing')}</label><select id="q_t" onchange="D.qp()"><option value="1">${t('single')}</option><option value="2">${t('double')}</option><option value="3" selected>${t('triple')}</option><option value="4">${t('quad')}</option></select></div></div>
+  <div class="row wrap"><div class="grow"><label>${t('count')}</label><input id="q_n" type="number" min="1" max="12" value="2"></div><div class="grow"><label>${t('price')}</label><input id="q_p" type="number" min="0" value="${PRICE[3]}"></div></div>
+  <p class="row"><button class="b p" onclick="D.quick()">${t('generate')}</button><button class="b" onclick="D.addFloor()">${t('addFloor')}</button></p></div>`;
+  return h;
+}
+function vBeds(){
+  return `<p class="mut">${t('tapBed')}</p>`+floors().map(f=>`<div class="card"><h2>${t('floor')} ${f}</h2>${S.rooms.filter(r=>r.floor===f).sort((a,b)=>a.id-b.id).map(r=>`<div style="margin-bottom:8px"><div class="row sp"><b>${t('room')} ${r.id}</b><span class="mut sm">${typeName(r.type)} · ${inr(r.price)}</span></div><div class="beds">${Array.from({length:r.type},(_,b)=>{const x=resAt(r.id,b);return `<div class="bed ${x?'o':'v'}" onclick="D.bed(${r.id},${b})">${x?esc(x.name.split(' ')[0]):'B'+(b+1)}</div>`}).join('')}</div></div>`).join('')}</div>`).join('');
+}
+function vRes(){
+  const list=[...S.res].sort((a,b)=>({overdue:0,due:1,paid:2}[stat(a)]-{overdue:0,due:1,paid:2}[stat(b)])||a.room-b.room);
+  const pend=S.res.filter(r=>stat(r)!=='paid');
+  return `<div class="card row sp"><div><b>${S.res.length}</b> <span class="mut">${t('tRes')}</span><div class="mut sm">${pend.length} ${t('dueL')} · ${MONTH}</div></div>${pend.length?`<button class="b p s" onclick="D.remAll()">${t('remindAll')}</button>`:''}</div>`+
+  (list.length?list.map(r=>{const st=stat(r);return `<div class="card"><div class="row sp"><b>${esc(r.name)}</b><span class="chip ${st}">${st==='paid'?t('paidL'):st==='overdue'?t('overdue'):t('dueL')}</span></div>
+  <div class="mut sm">${t('room')} ${r.room} · ${esc(r.phone.replace(/(\d{5})(\d+)/,'$1 $2'))}</div>
+  <div class="row sp sm" style="margin-top:4px"><span>${t('rent')} ${inr(r.rent)}</span>${st==='paid'?`<span class="ok">${r.upi?'UPI '+inr(r.upi):''} ${r.cash?'Cash '+inr(r.cash):''}</span>`:`<b>${t('dueL')} ${inr(due(r))}</b>`}</div>
+  ${st!=='paid'?`<div class="row" style="margin-top:8px"><button class="b p s" onclick="D.pay(${r.id})">${t('markPaid')}</button><button class="b s" onclick="D.rem(${r.id})">${r.sent?t('reminded'):t('remind')}</button></div>`:''}</div>`}).join(''):`<p class="mut">${t('none')}</p>`);
+}
+function vStaff(){
+  return S.staff.map(x=>`<div class="card"><div class="row sp"><div><b>${esc(x.name)}</b><div class="mut sm">${esc(x.role)} · ${inr(x.salary)}</div></div><span class="chip ${x.paid?'paid':'due'}">${x.paid?t('salaryPaid'):t('dueL')}</span></div>
+  <div class="row" style="margin-top:8px">${x.paid?'':`<button class="b p s" onclick="D.salary(${x.id})">${t('markSalary')}</button>`}<button class="b d s ${armed==='s'+x.id?'armed':''}" onclick="D.rmStaff(${x.id})">${armed==='s'+x.id?t('tapAgain'):t('remove')}</button></div></div>`).join('')+
+  `<div class="card"><h2>${t('addStaff')}</h2><div class="row wrap"><div class="grow"><label>${t('name')}</label><input id="s_n"></div><div class="grow"><label>${t('role')}</label><input id="s_r"></div><div class="grow"><label>${t('salary')}</label><input id="s_s" type="number" min="0"></div></div><p><button class="b p" onclick="D.addStaff()">${t('addStaff')}</button></p></div>`;
+}
+function vComp(){
+  const s=score();
+  const lic=LIC.map(([k])=>{const x=S.lic[k]||{s:'none'};const soon=x.s==='have'&&x.d<=60;return `<div class="ck"><span class="grow">${t(k)}</span>${x.s==='have'?`<span class="sm ${soon?'warn':'mut'}">${t('inDays').replace('{n}',x.d)}</span><span class="chip ${soon?'due':'paid'}">${soon?t('renewSoon'):t('have')}</span>`:x.s==='applied'?`<span class="chip due">${t('applied')}</span>`:`<span class="chip overdue">${t('missing')}</span>`}</div>`}).join('');
+  const chk=(arr,grp)=>arr.map(k=>`<label class="ck" style="margin:0;font-size:15px;color:inherit;font-weight:400"><input type="checkbox" style="width:auto" ${S[grp][k]?'checked':''} onchange="D.ck('${grp}','${k}',this.checked)"> ${t(k)}</label>`).join('');
+  return `<div class="card"><div class="row sp"><h2>${t('score')}</h2><b class="${sc(s.total)}" style="font-size:24px">${s.total}/100</b></div><div class="mut sm">${t('licences')} ${s.lic} · ${t('safety')} ${s.safe} · ${t('dpdp')} ${s.dp}</div></div>
+  <div class="card"><h2>${t('licences')}</h2>${lic}</div><div class="card"><h2>${t('safety')}</h2>${chk(SAFE,'safe')}</div><div class="card"><h2>${t('dpdp')}</h2>${chk(DP,'dp')}</div><p class="mut sm" style="text-align:center">${t('cta')}</p>`;
+}
+function vModal(){
+  if(!modal)return '';
+  let b='';
+  if(modal.k==='occ'){b=`<h2>${t('addRes')} · ${t('room')} ${modal.room}</h2><label>${t('name')}</label><input id="m_n" autofocus><label>${t('phone')}</label><input id="m_p" type="tel" inputmode="tel"><p class="row"><button class="b p" onclick="D.occ()">${t('addRes')}</button><button class="b" onclick="D.close()">${t('cancel')}</button></p>`}
+  else if(modal.k==='view'){const x=S.res.find(r=>r.id===modal.id);if(!x){modal=null;return ''}b=`<h2>${esc(x.name)}</h2><p class="mut">${t('room')} ${x.room} · bed ${x.bed+1}<br>${esc(x.phone)}<br>${t('rent')} ${inr(x.rent)} · ${stat(x)==='paid'?t('paidL'):t('dueL')+' '+inr(due(x))}</p><p class="row"><button class="b d ${armed==='v'+x.id?'armed':''}" onclick="D.vacate(${x.id})">${armed==='v'+x.id?t('tapAgain'):t('vacate')}</button><button class="b" onclick="D.close()">${t('cancel')}</button></p>`}
+  else if(modal.k==='pay'){const x=S.res.find(r=>r.id===modal.id);b=`<h2>${esc(x.name)} · ${t('dueL')} ${inr(due(x))}</h2><div class="row"><div class="grow"><label>${t('cash')}</label><input id="p_c" type="number" min="0" value="0"></div><div class="grow"><label>${t('upi')}</label><input id="p_u" type="number" min="0" value="${due(x)}"></div></div><p class="row"><button class="b p" onclick="D.payOk(${x.id})">${t('confirm')}</button><button class="b" onclick="D.close()">${t('cancel')}</button></p>`}
+  else if(modal.k==='rem'){const x=S.res.find(r=>r.id===modal.id);b=`<h2>${t('remind')}: ${esc(x.name)}</h2><pre>${esc(msgFor(x))}</pre><p class="row"><button class="b p" onclick="D.sent(${x.id})">${t('markSent')}</button><button class="b" onclick="D.copy()">${t('copy')}</button><button class="b" onclick="D.close()">${t('cancel')}</button></p><p class="mut sm">Demo numbers are fictional, so WhatsApp is not opened.</p>`}
+  else if(modal.k==='all'){const p=S.res.filter(r=>stat(r)!=='paid');b=`<h2>${t('remindAll')} (${p.length})</h2><label>${t('msgLabel')}</label><pre>${esc(msgFor({name:'{name}',room:'{room}',rent:0,cash:0,upi:0},true))}</pre><p class="mut sm">${p.slice(0,6).map(r=>esc(r.name)).join(', ')}${p.length>6?' +'+(p.length-6):''}</p><p class="row"><button class="b p" onclick="D.sentAll()">${t('markSent')}</button><button class="b" onclick="D.copy(true)">${t('copy')}</button><button class="b" onclick="D.close()">${t('cancel')}</button></p>`}
+  return `<div class="ov" onclick="if(event.target===this)D.close()"><div class="md">${b}</div></div>`;
+}
+function msgFor(x,generic){
+  return t('dueMsg').replace('{name}',x.name).replace('{amt}',generic?'₹{amount}':inr(due(x))).replace('{month}',MONTH).replace('{room}',x.room).replace('{pg}',PG.name);
+}
+const TABS=[['overview','tOverview'],['rooms','tRooms'],['beds','tVacancy'],['residents','tRes'],['staff','tStaff'],['compliance','tComp']];
+function render(){
+  $('#pgname').textContent=PG.name;$('#pgsub').textContent=PG.area;$('#demo').textContent=t('demo');$('#rst').textContent=t('reset');$('#lang').value=S.lang;
+  document.documentElement.lang=S.lang;
+  const v={overview:vOverview,rooms:vRooms,beds:vBeds,residents:vRes,staff:vStaff,compliance:vComp}[S.tab]||vOverview;
+  $('#app').innerHTML=`<div class="tabs">${TABS.map(([k,n])=>`<button class="tab ${S.tab===k?'on':''}" onclick="D.tab('${k}')">${t(n)}</button>`).join('')}</div>`+v()+vModal();
+}
+
+/* ---------- actions ---------- */
+const D={
+  lang(v){S.lang=v;save();render()},tab(k){S.tab=k;armed=null;modal=null;save();render();window.scrollTo(0,0)},
+  fl(f){S.open[f]=!S.open[f];save();render()},close(){modal=null;armed=null;render()},
+  qp(){$('#q_p').value=PRICE[$('#q_t').value]},
+  quick(){
+    const f=+$('#q_f').value,ty=+$('#q_t').value,n=Math.max(1,Math.min(12,+$('#q_n').value||1)),p=+$('#q_p').value||PRICE[ty];
+    let next=S.rooms.filter(r=>r.floor===f).reduce((a,r)=>Math.max(a,r.id),f*100)+1;
+    for(let i=0;i<n;i++)S.rooms.push({id:next++,floor:f,type:ty,price:p});
+    S.open[f]=true;save();render();toast('+'+n+' '+t('rooms'));
+  },
+  addFloor(){const f=Math.max(...floors())+1;S.rooms.push({id:f*100+1,floor:f,type:3,price:PRICE[3]});S.open[f]=true;save();render()},
+  delRoom(id){
+    if(S.res.some(x=>x.room===id))return toast(t('blocked'));
+    if(armed!=='r'+id){armed='r'+id;return render()}
+    S.rooms=S.rooms.filter(r=>r.id!==id);armed=null;save();render();
+  },
+  bed(rid,b){const x=resAt(rid,b);modal=x?{k:'view',id:x.id}:{k:'occ',room:rid,bed:b};armed=null;render()},
+  occ(){
+    const n=$('#m_n').value.trim(),p=$('#m_p').value.trim();if(!n)return toast(t('name'));
+    const r=roomOf(modal.room);S.res.push({id:S.nextRes++,name:n,phone:p||'—',room:modal.room,bed:modal.bed,rent:r.price,cash:0,upi:0,late:false,sent:false});
+    modal=null;save();render();toast('✓ '+n);
+  },
+  vacate(id){if(armed!=='v'+id){armed='v'+id;return render()}S.res=S.res.filter(x=>x.id!==id);armed=null;modal=null;save();render()},
+  pay(id){modal={k:'pay',id};render()},
+  payOk(id){const x=S.res.find(r=>r.id===id);x.cash+=Math.max(0,+$('#p_c').value||0);x.upi+=Math.max(0,+$('#p_u').value||0);if(due(x)<=0)x.late=false;modal=null;save();render();toast('✓')},
+  rem(id){modal={k:'rem',id};render()},remAll(){modal={k:'all'};render()},
+  sent(id){S.res.find(r=>r.id===id).sent=true;modal=null;save();render();toast(t('reminded'))},
+  sentAll(){S.res.forEach(r=>{if(stat(r)!=='paid')r.sent=true});modal=null;save();render();toast(t('reminded'))},
+  async copy(all){const x=modal&&modal.id?S.res.find(r=>r.id===modal.id):null;const txt=all?msgFor({name:'{name}',room:'{room}'},true):msgFor(x);try{await navigator.clipboard.writeText(txt);toast(t('copied'))}catch(e){toast(txt.slice(0,40)+'…')}},
+  salary(id){S.staff.find(x=>x.id===id).paid=true;save();render()},
+  rmStaff(id){if(armed!=='s'+id){armed='s'+id;return render()}S.staff=S.staff.filter(x=>x.id!==id);armed=null;save();render()},
+  addStaff(){const n=$('#s_n').value.trim();if(!n)return toast(t('name'));S.staff.push({id:S.nextStaff++,name:n,role:$('#s_r').value.trim()||'—',salary:+$('#s_s').value||0,paid:false});save();render()},
+  ck(g,k,v){S[g][k]=v?1:0;save();render()},
+  reset(){S=seed();modal=null;armed=null;save();render()}
+};
+window.D=D;
+render();
+</script>
+</body>
+</html>
