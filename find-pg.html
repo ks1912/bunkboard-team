@@ -43,6 +43,11 @@ nav div{display:flex;width:100%;max-width:760px}nav button{flex:1;border:0;backg
 .ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
 .priv{background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;border-radius:10px;padding:10px;font-size:13px}
 a{color:var(--pri)}
+.pct{display:inline-flex;align-items:center;justify-content:center;min-width:54px;height:54px;border-radius:50%;font-weight:800;font-size:16px;border:4px solid}
+.pct.h{border-color:#16a34a;color:#15803d}.pct.m{border-color:#f59e0b;color:#b45309}.pct.l{border-color:#ef4444;color:#b91c1c}
+.av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;background:#eef2ff;flex:none}
+.gd{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;background:#dcfce7;color:#15803d;margin:2px 2px 0 0}
+.bd{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;background:#fee2e2;color:#b91c1c;margin:2px 2px 0 0}
 </style>
 </head>
 <body>
@@ -74,6 +79,72 @@ const STATIC=[
  {id:'sai',name:"Sri Sai Women's Hostel",area:'Dilsukhnagar',gender:'Women',emoji:'🌸',types:{2:{p:8500,v:2},3:{p:6800,v:3},4:{p:5500,v:0}},lic:lic({trade:420,fire:260,building:1200,police:300,fssai:180,labour:330}),safe:flags('cctv,ext,exit,aid,reg,ward,elec'),dp:flags('consent,notice,cctvp'),food:{inc:true},power:'Included',maint:0,deposit:2,refund:'Refund in 15 days',lock:'1 month',rules:['Gate closes 10 pm (late pass allowed)','Visitors in common room'],walk:'8 min to Dilsukhnagar bus stop (demo)',reviews:[['Verified resident · 10 months','Warden is strict but my parents feel relaxed. Fire drill happens every quarter.']]},
  {id:'elite',name:'Elite Executive Stay',area:'Kondapur',gender:'Co-ed (separate floors)',emoji:'🏙️',types:{1:{p:15000,v:2},2:{p:10500,v:3}},lic:lic({trade:500,fire:20,building:900,police:200,fssai:150}),safe:flags('cctv,ext,exit,aid,reg,ward'),dp:flags('consent,notice'),food:{inc:false,extra:4000},power:'Metered, about ₹500',maint:300,deposit:2,refund:'Refund in 15 days',lock:'2 months',rules:['Quiet hours 11 pm to 6 am','Pets not allowed'],walk:'12 min to Kondapur junction (demo)',reviews:[['Verified resident · 6 months','Clean and quiet. Fire certificate is due for renewal, owner says it is in process.']]}
 ];
+/* ---------- roommate matching ---------- */
+const Q=[
+ ['sleep','When do you sleep?',[['early','Early bird (sleep by 10 pm)'],['flex','Flexible'],['night','Night owl (after midnight)']]],
+ ['clean','How tidy are you?',[[5,'Very neat'],[4,'Neat'],[3,'Average'],[2,'Relaxed'],[1,'Messy is fine']]],
+ ['noise','Noise you can live with',[[1,'Silence please'],[2,'Low'],[3,'Normal'],[4,'Music and calls are fine'],[5,'Lively']]],
+ ['guests','Friends visiting',[[1,'Rarely'],[2,'Sometimes'],[3,'Often']]],
+ ['diet','Food',[['veg','Vegetarian'],['egg','Eggetarian'],['nonveg','Non-vegetarian']]],
+ ['smoke','Smoking',[['strict','No smoking around me'],['ok','Fine either way'],['smoker','I smoke']]],
+ ['mode','Where do you spend the day?',[['office','Office or college'],['hybrid','Hybrid'],['wfh','Work from room']]]
+];
+const LANGS=['Telugu','Hindi','English','Tamil','Kannada','Malayalam','Urdu'];
+const POOL=[
+ {id:'p1',name:'Divya K.',g:'Women',age:'23-27',role:'Software engineer',emo:'👩‍💻',sleep:'early',clean:5,noise:2,guests:1,diet:'veg',smoke:'strict',mode:'hybrid',lang:['Telugu','English'],area:'Ameerpet',sh:3},
+ {id:'p2',name:'Harini R.',g:'Women',age:'18-22',role:'Student, MBA',emo:'🎓',sleep:'night',clean:3,noise:4,guests:2,diet:'nonveg',smoke:'ok',mode:'office',lang:['Telugu','Hindi','English'],area:'Ameerpet',sh:2},
+ {id:'p3',name:'Neha S.',g:'Women',age:'23-27',role:'Analyst',emo:'📊',sleep:'flex',clean:4,noise:3,guests:2,diet:'egg',smoke:'strict',mode:'hybrid',lang:['Hindi','English'],area:'Gachibowli',sh:2},
+ {id:'p4',name:'Pavani G.',g:'Women',age:'18-22',role:'Student, B.Tech',emo:'📚',sleep:'early',clean:4,noise:1,guests:1,diet:'veg',smoke:'strict',mode:'office',lang:['Telugu','English'],area:'Ameerpet',sh:4},
+ {id:'p5',name:'Sirisha N.',g:'Women',age:'28-35',role:'HR manager',emo:'💼',sleep:'early',clean:5,noise:2,guests:1,diet:'nonveg',smoke:'strict',mode:'office',lang:['Telugu','English'],area:'Kondapur',sh:1},
+ {id:'p6',name:'Aishwarya V.',g:'Women',age:'23-27',role:'Designer',emo:'🎨',sleep:'night',clean:2,noise:4,guests:3,diet:'nonveg',smoke:'ok',mode:'wfh',lang:['Tamil','English','Hindi'],area:'Madhapur',sh:2},
+ {id:'p7',name:'Ramya T.',g:'Women',age:'18-22',role:'Student, nursing',emo:'🩺',sleep:'flex',clean:4,noise:2,guests:1,diet:'veg',smoke:'strict',mode:'office',lang:['Telugu','Kannada'],area:'Dilsukhnagar',sh:3},
+ {id:'p8',name:'Arjun R.',g:'Men',age:'23-27',role:'Backend developer',emo:'🧑‍💻',sleep:'night',clean:3,noise:4,guests:2,diet:'nonveg',smoke:'ok',mode:'hybrid',lang:['Telugu','English'],area:'Madhapur',sh:3},
+ {id:'p9',name:'Karthik S.',g:'Men',age:'18-22',role:'Student, B.Tech',emo:'🎓',sleep:'early',clean:4,noise:2,guests:1,diet:'veg',smoke:'strict',mode:'office',lang:['Telugu','Tamil','English'],area:'Ameerpet',sh:4},
+ {id:'p10',name:'Vamsi P.',g:'Men',age:'23-27',role:'Sales executive',emo:'📈',sleep:'flex',clean:3,noise:3,guests:3,diet:'nonveg',smoke:'ok',mode:'office',lang:['Telugu','Hindi'],area:'Kondapur',sh:2},
+ {id:'p11',name:'Rahul G.',g:'Men',age:'28-35',role:'QA lead',emo:'🧪',sleep:'early',clean:5,noise:2,guests:1,diet:'egg',smoke:'strict',mode:'hybrid',lang:['Hindi','English'],area:'Gachibowli',sh:1},
+ {id:'p12',name:'Sai Teja K.',g:'Men',age:'18-22',role:'Student, MBA',emo:'📚',sleep:'night',clean:2,noise:5,guests:3,diet:'nonveg',smoke:'smoker',mode:'office',lang:['Telugu','English'],area:'Ameerpet',sh:3},
+ {id:'p13',name:'Imran S.',g:'Men',age:'23-27',role:'Data analyst',emo:'📊',sleep:'night',clean:4,noise:3,guests:2,diet:'nonveg',smoke:'ok',mode:'wfh',lang:['Urdu','Hindi','English'],area:'Madhapur',sh:2},
+ {id:'p14',name:'Naveen B.',g:'Men',age:'28-35',role:'Civil engineer',emo:'🏗️',sleep:'early',clean:4,noise:2,guests:1,diet:'veg',smoke:'strict',mode:'office',lang:['Telugu','Kannada','English'],area:'Dilsukhnagar',sh:3}
+];
+const LBL={sleep:{early:'early bird',flex:'flexible sleeper',night:'night owl'},diet:{veg:'vegetarian',egg:'eggetarian',nonveg:'non-veg'},mode:{office:'out all day',hybrid:'hybrid',wfh:'works from room'}};
+function sc3(a,b,m){return 1-Math.abs(a-b)/m}
+function compat(a,b){
+  const sim={},W={sleep:25,clean:20,noise:15,guests:10,diet:10,smoke:10,lang:5,mode:5};
+  sim.sleep=a.sleep===b.sleep?1:(a.sleep==='flex'||b.sleep==='flex')?.7:0;
+  sim.clean=sc3(a.clean,b.clean,4);sim.noise=sc3(a.noise,b.noise,4);sim.guests=sc3(a.guests,b.guests,2);
+  const dm={'veg-veg':1,'egg-egg':1,'nonveg-nonveg':1,'veg-egg':.6,'egg-veg':.6,'egg-nonveg':.8,'nonveg-egg':.8};sim.diet=dm[a.diet+'-'+b.diet]!==undefined?dm[a.diet+'-'+b.diet]:.2;
+  const brk=(a.smoke==='strict'&&b.smoke==='smoker')||(a.smoke==='smoker'&&b.smoke==='strict');
+  sim.smoke=brk?0:1;sim.lang=a.lang.some(x=>b.lang.includes(x))?1:0;
+  sim.mode=a.mode===b.mode?1:(a.mode==='wfh'&&b.sleep==='night')||(b.mode==='wfh'&&a.sleep==='night')?.3:.8;
+  let t=0,w=0;Object.keys(W).forEach(k=>{t+=W[k]*sim[k];w+=W[k]});
+  const good=[],bad=[];
+  if(sim.sleep>=1)good.push('Same sleep schedule');else if(sim.sleep===0)bad.push('Sleep times differ');
+  if(sim.clean>=.75)good.push('Similar tidiness');else if(sim.clean<=.4)bad.push('Different tidiness');
+  if(sim.noise>=.75)good.push('Similar noise level');else if(sim.noise<=.4)bad.push('Noise levels differ');
+  if(sim.diet>=1)good.push('Same food habits');else if(sim.diet<=.2)bad.push('Veg and non-veg');
+  if(sim.lang)good.push('Common language');
+  if(sim.guests>=1)good.push('Same view on guests');else if(sim.guests===0)bad.push('Guest habits differ');
+  return {pct:Math.round(100*t/w),good:good.slice(0,3),bad:bad.slice(0,2),dealbreaker:brk};
+}
+function synthRes(r){ // opt-in anonymous lifestyle summary for demo residents
+  const k=r.id*7;const pick=(a,i)=>a[(k+i*3)%a.length];
+  return {name:r.name.split(' ')[0],sleep:pick(['early','flex','night','early'],1),clean:pick([5,4,3,4],2),noise:pick([2,3,4,2],3),guests:pick([1,2,1,3],4),diet:pick(['veg','nonveg','egg','veg'],5),smoke:'strict',mode:pick(['office','hybrid','wfh','office'],6),lang:pick([['Telugu','English'],['Hindi','English'],['Telugu','Hindi']],7)};
+}
+function roomsFor(me){
+  const out=[];
+  if(me.g==='Women'){
+    const o=ownerState();
+    o.rooms.forEach(r=>{const occ=[],free=[];for(let b=0;b<r.type;b++){const x=o.res.find(z=>z.room===r.id&&z.bed===b);x?occ.push(x):free.push(b)}
+      if(occ.length&&free.length&&r.type>1){const mates=occ.map(synthRes);const sc=mates.map(m=>compat(me,m));out.push({pg:'sunrise',pgName:"Sunrise Women's PG",live:true,room:r.id,type:r.type,price:r.price,free:free.length,pref:r.id+':'+free[0],mates,pct:Math.round(sc.reduce((a,x)=>a+x.pct,0)/sc.length),good:sc[0].good,bad:sc[0].bad,db:sc.some(x=>x.dealbreaker)})}});
+  }
+  const pool=POOL.filter(p=>p.g===me.g);
+  STATIC.filter(p=>p.gender.startsWith(me.g)||p.gender.startsWith('Co-ed')).forEach((pg,i)=>{
+    [[2,1],[2,2]].forEach(([n,free],j)=>{const mates=Array.from({length:n},(_,k)=>pool[(i*2+j*3+k)%pool.length]);const ty=n+free;if(!pg.types[ty])return;
+      const sc=mates.map(m=>compat(me,m));out.push({pg:pg.id,pgName:pg.name,room:(i+2)*100+j*7+4,type:ty,price:pg.types[ty].p,free,mates,pct:Math.round(sc.reduce((a,x)=>a+x.pct,0)/sc.length),good:sc[0].good,bad:sc[0].bad,db:sc.some(x=>x.dealbreaker)})});
+  });
+  return out.filter(r=>!r.db).sort((a,b)=>b.pct-a.pct);
+}
+const pctCls=n=>n>=75?'h':n>=55?'m':'l';
 function ownerState(){try{const x=JSON.parse(localStorage.getItem(OK)||'null');if(x&&x.rooms)return x}catch(e){}return seed()}
 function leads(){try{return JSON.parse(localStorage.getItem(LK)||'[]')}catch(e){return []}}
 function saveLeads(a){try{localStorage.setItem(LK,JSON.stringify(a))}catch(e){}}
@@ -99,7 +170,8 @@ const allIn=(p,ty)=>{const r=p.types[ty].p;return r+(p.food.inc?0:p.food.extra)+
 
 /* ---------- state ---------- */
 let S;try{S=JSON.parse(localStorage.getItem(SK)||'null')}catch(e){S=null}
-if(!S)S={view:'search',area:'',gender:'',sharing:'',max:15000,verified:false,sort:'best',saved:[],cmp:[],me:{name:'',phone:''}};
+if(!S)S={view:'search',area:'',gender:'',sharing:'',max:15000,verified:false,sort:'best',saved:[],cmp:[],me:{name:'',phone:''},profile:null,reqs:[],mtab:'people'};
+if(!S.reqs)S.reqs=[];if(!S.mtab)S.mtab='people';
 let pid=null,modal=null;
 const save=()=>{try{localStorage.setItem(SK,JSON.stringify(S))}catch(e){}};
 function toast(m){const x=$('#toast');x.textContent=m;x.style.display='block';clearTimeout(toast.i);toast.i=setTimeout(()=>x.style.display='none',2600)}
@@ -123,7 +195,7 @@ function card(p){
 }
 function vSearch(){
   const l=filtered();
-  return `<h1>Find your PG</h1><div class="card"><div class="chips"><button class="${!S.area?'on':''}" onclick="F.set('area','')">All areas</button>${AREAS.map(a=>`<button class="${S.area===a?'on':''}" onclick="F.set('area','${a}')">${a}</button>`).join('')}</div>
+  return `<div class="row sp"><h1>Find your PG</h1><button class="b s" onclick="F.go('saved')">♥ Saved (${S.saved.length})</button></div><div class="card"><div class="chips"><button class="${!S.area?'on':''}" onclick="F.set('area','')">All areas</button>${AREAS.map(a=>`<button class="${S.area===a?'on':''}" onclick="F.set('area','${a}')">${a}</button>`).join('')}</div>
   <div class="row wrap" style="margin-top:6px"><div class="grow"><label>I am</label><select onchange="F.set('gender',this.value)"><option value="">Any</option><option value="Women"${S.gender==='Women'?' selected':''}>Woman</option><option value="Men"${S.gender==='Men'?' selected':''}>Man</option></select></div>
   <div class="grow"><label>Sharing</label><select onchange="F.set('sharing',this.value)"><option value="">Any</option>${[1,2,3,4].map(n=>`<option value="${n}"${+S.sharing===n?' selected':''}>${TN[n]}</option>`).join('')}</select></div>
   <div class="grow"><label>Sort</label><select onchange="F.set('sort',this.value)"><option value="best"${S.sort==='best'?' selected':''}>Most verified</option><option value="price"${S.sort==='price'?' selected':''}>Lowest price</option><option value="vac"${S.sort==='vac'?' selected':''}>Most beds free</option></select></div></div>
@@ -201,27 +273,63 @@ function vWhy(){
   <div class="ck"><b>2</b><span><b>Live bed-level vacancy.</b> The owner taps a bed, the seeker sees it. No “sorry, already given” calls.</span></div>
   <div class="ck"><b>3</b><span><b>True monthly cost</b> upfront: rent, food, electricity, maintenance, deposit and refund time.</span></div>
   <div class="ck"><b>4</b><span><b>Your number is not resold.</b> It goes to one PG, with your consent, and stays hidden from the owner until they confirm your visit.</span></div>
-  <div class="ck"><b>5</b><span><b>One flow:</b> search, compare, visit, reserve, move in, pay rent. The owner sees every step in their own dashboard.</span></div>
-  <div class="ck"><b>6</b><span>Reviews only from <b>verified residents</b>.</span></div></div>
+  <div class="ck"><b>5</b><span><b>Roommate matching.</b> A lifestyle questionnaire gives a compatibility % for other seekers and for rooms with a free bed, plus a roommate agreement. Campus-housing software such as StarRez does this for dorms; PG seekers get nothing like it today.</span></div>
+  <div class="ck"><b>6</b><span><b>One flow:</b> search, compare, visit, reserve, move in, pay rent. The owner sees every step in their own dashboard.</span></div>
+  <div class="ck"><b>7</b><span>Reviews only from <b>verified residents</b>.</span></div></div>
   <div class="card"><h2>Try the full flow (2 minutes)</h2><ol style="padding-left:18px;margin:0"><li>Open <b>Sunrise Women's PG</b> and read its verified score.</li><li>Tap <b>Book a free visit</b>.</li><li>Open the <a href="owner-demo.html" target="_blank" rel="noopener">Owner demo</a> → <b>Enquiries</b> → Confirm visit.</li><li>Come back here → <b>My visits</b> → Reserve bed.</li><li>In the Owner demo, tap <b>Move in</b>. Then pay rent here and watch it turn Paid in the Owner demo.</li></ol>
   <p class="mut sm">Run both pages in the same browser. They share data on this device only.</p></div>
   <p class="mut sm">Sources: telanganatoday.com, propnewstime.com, deccanchronicle.com, newsmeter.in. Check these against the originals before using them in a sales deck.</p>`;
+}
+function vMates(){
+  const me=S.profile;
+  if(!me){
+    return `<h1>Find a roommate you will get along with</h1><div class="priv">Answer 9 quick questions. We show people and rooms ranked by compatibility, the way student-housing software does for campus dorms, but for PGs. You decide who sees what.</div>
+    <div class="card"><div class="row wrap"><div class="grow"><label>First name and initial</label><input id="r_n" value="${esc(S.me.name)}"></div><div class="grow"><label>I am</label><select id="r_g"><option>Women</option><option>Men</option></select></div></div>
+    <div class="row wrap"><div class="grow"><label>Age</label><select id="r_a"><option>18-22</option><option selected>23-27</option><option>28-35</option><option>35+</option></select></div><div class="grow"><label>I am a</label><select id="r_r"><option>Student</option><option selected>Working professional</option></select></div></div>
+    ${Q.map(([k,t,o])=>`<label>${t}</label><select id="r_${k}">${o.map(([v,l],i)=>`<option value="${v}"${i===1||(k==='clean'&&v===4)?' selected':''}>${l}</option>`).join('')}</select>`).join('')}
+    <label>Languages I speak</label><div class="row wrap">${LANGS.map(l=>`<label class="row" style="color:inherit;font-weight:400;font-size:13px;margin:2px 8px 2px 0"><input type="checkbox" class="r_l" value="${l}" ${['Telugu','English'].includes(l)?'checked':''}> ${l}</label>`).join('')}</div>
+    <label class="row" style="color:inherit;font-size:13px;font-weight:400;margin-top:12px;align-items:flex-start"><input id="r_c" type="checkbox"> <span>I agree that other seekers and PG owners on BunkBoard can see my first name, initial and these lifestyle answers. They never see my phone number unless I accept their request. I can delete my profile any time.</span></label>
+    <p><button class="b p" style="width:100%" onclick="F.profile()">See my matches</button></p></div>`;
+  }
+  const tab=S.mtab;
+  let h=`<div class="row sp"><h1>Roommates</h1><button class="b s" onclick="F.editProfile()">Edit profile</button></div>
+  <div class="card row"><div class="av">🙋</div><div class="grow"><b>${esc(me.name)}</b> <span class="mut sm">${me.g}, ${me.age}</span><div class="mut sm">${LBL.sleep[me.sleep]} · tidy ${me.clean}/5 · ${LBL.diet[me.diet]}</div></div></div>
+  <div class="chips" style="margin-bottom:8px">${[['people','People looking'],['rooms','Rooms with a free bed'],['reqs','My requests ('+S.reqs.length+')']].map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="F.mtab('${k}')">${l}</button>`).join('')}</div>`;
+  if(tab==='people'){
+    const l=POOL.filter(p=>p.g===me.g).map(p=>({p,c:compat(me,p)})).filter(x=>!x.c.dealbreaker).sort((a,b)=>b.c.pct-a.c.pct);
+    h+=l.map(({p,c})=>{const rq=S.reqs.find(r=>r.pid===p.id);return `<div class="card"><div class="row"><div class="av">${p.emo}</div><div class="grow"><b>${esc(p.name)}</b> <span class="mut sm">${p.age}</span><div class="mut sm">${esc(p.role)} · ${LBL.sleep[p.sleep]} · ${LBL.diet[p.diet]}</div><div class="mut sm">Looking at ${esc(p.area)} · ${TN[p.sh]}</div></div><div class="pct ${pctCls(c.pct)}">${c.pct}%</div></div>
+    <div>${c.good.map(x=>`<span class="gd">✔ ${x}</span>`).join('')}${c.bad.map(x=>`<span class="bd">! ${x}</span>`).join('')}</div>
+    <p style="margin:8px 0 0">${rq?`<span class="tag">${rq.status==='accepted'?'Accepted':'Request sent'}</span>`:`<button class="b p s" onclick="F.req('${p.id}')">Request to room together</button>`}</p></div>`}).join('')||'<p class="mut">No profiles yet.</p>';
+    h+=`<p class="mut sm">Only people of the same gender are shown, and anyone whose smoking preference clashes with yours is hidden.</p>`;
+  }else if(tab==='rooms'){
+    const rs=roomsFor(me).slice(0,12);
+    h+=`<p class="mut sm">Rooms where current residents have chosen to share an anonymous lifestyle summary. Sunrise is live from the Owner demo.</p>`+(rs.length?rs.map(r=>`<div class="card"><div class="row"><div class="grow"><b>${esc(r.pgName)}</b>${r.live?' <span class="live">● LIVE</span>':''}<div class="mut sm">Room ${r.room} · ${TN[r.type]} · ${inr(r.price)}/bed · <b class="ok">${r.free} bed${r.free>1?'s':''} free</b></div></div><div class="pct ${pctCls(r.pct)}">${r.pct}%</div></div>
+    <div class="mut sm" style="margin-top:4px">Roommates: ${r.mates.map(m=>esc(m.name.split(' ')[0])+' ('+LBL.sleep[m.sleep]+', '+LBL.diet[m.diet]+')').join(' · ')}</div>
+    <div>${r.good.map(x=>`<span class="gd">✔ ${x}</span>`).join('')}${r.bad.map(x=>`<span class="bd">! ${x}</span>`).join('')}</div>
+    <p style="margin:8px 0 0"><button class="b p s" onclick="F.bookRoom('${r.pg}',${r.type},'${r.pref||''}','Room ${r.room} (roommate match ${r.pct}%)')">Visit this room</button></p></div>`).join(''):'<p class="mut">No matching rooms right now.</p>');
+  }else{
+    h+=S.reqs.length?S.reqs.map(r=>{const p=POOL.find(x=>x.id===r.pid),c=compat(me,p),ag=r.agree;return `<div class="card"><div class="row"><div class="av">${p.emo}</div><div class="grow"><b>${esc(p.name)}</b><div class="mut sm">${c.pct}% match · ${r.status==='accepted'?'accepted your request':'waiting for reply'}</div></div></div>
+    ${r.status==='sent'?`<p class="mut sm" style="margin:6px 0 0">Your number stays hidden until they accept. <button class="b s" onclick="F.accept('${r.id}')">Demo: ${esc(p.name.split(' ')[0])} accepts</button></p>`:
+    `<h3 style="margin:10px 0 4px;font-size:13px">Roommate agreement</h3>${ag?`<div class="priv">✔ Agreed: quiet hours from ${esc(ag.quiet)}, guests: ${esc(ag.guests)}, cleaning: ${esc(ag.clean)}. A copy goes to the PG owner.</div>`:`<div class="row wrap"><div class="grow"><label>Quiet hours from</label><select id="ag_q_${r.id}"><option>10 pm</option><option>11 pm</option><option>midnight</option></select></div><div class="grow"><label>Guests</label><select id="ag_g_${r.id}"><option>weekends only</option><option>never in room</option><option>anytime with notice</option></select></div><div class="grow"><label>Cleaning</label><select id="ag_c_${r.id}"><option>alternate weeks</option><option>split daily</option></select></div></div><p><button class="b s" onclick="F.agree('${r.id}')">We both agree</button></p>`}
+    <p style="margin:6px 0 0"><button class="b p s" onclick="F.bookTogether('${r.id}')">Book a visit together</button></p>`}</div>`}).join(''):'<p class="mut">Send a request from People looking.</p>';
+  }
+  return h;
 }
 function vModal(){
   if(!modal)return '';
   const p=byId(modal.pg);
   const days=Array.from({length:7},(_,i)=>{const d=new Date(Date.now()+(i+1)*864e5);return d.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'})});
   return `<div class="ov" onclick="if(event.target===this)F.close()"><div class="md"><h2>Book a free visit · ${esc(p.name)}</h2>
-  <label>Your name</label><input id="b_n" value="${esc(S.me.name)}"><label>Mobile</label><input id="b_p" type="tel" inputmode="tel" value="${esc(S.me.phone)}">
-  <div class="row wrap"><div class="grow"><label>Sharing</label><select id="b_t">${Object.keys(p.types).map(k=>`<option value="${k}">${TN[k]} – ${inr(p.types[k].p)}</option>`).join('')}</select></div><div class="grow"><label>Day</label><select id="b_d">${days.map(d=>`<option>${d}</option>`).join('')}</select></div><div class="grow"><label>Time</label><select id="b_s"><option>Morning</option><option>Afternoon</option><option>Evening</option></select></div></div>
+  ${modal.note?`<div class="priv" style="margin-bottom:6px">${esc(modal.note)}</div>`:''}<label>Your name</label><input id="b_n" value="${esc(S.me.name||(S.profile?S.profile.name:''))}"><label>Mobile</label><input id="b_p" type="tel" inputmode="tel" value="${esc(S.me.phone)}">
+  <div class="row wrap"><div class="grow"><label>Sharing</label><select id="b_t">${Object.keys(p.types).map(k=>`<option value="${k}"${+modal.ty===+k?' selected':''}>${TN[k]} – ${inr(p.types[k].p)}</option>`).join('')}</select></div><div class="grow"><label>Day</label><select id="b_d">${days.map(d=>`<option>${d}</option>`).join('')}</select></div><div class="grow"><label>Time</label><select id="b_s"><option>Morning</option><option>Afternoon</option><option>Evening</option></select></div></div>
   <label class="row" style="color:inherit;font-size:13px;font-weight:400;margin-top:12px;align-items:flex-start"><input id="b_c" type="checkbox"> <span>I agree that BunkBoard shares my name and mobile number only with <b>${esc(p.name)}</b> for this visit. They will see my number after they confirm. I can withdraw consent any time.</span></label>
   <p class="row"><button class="b p grow" onclick="F.send()">Send request</button><button class="b" onclick="F.close()">Cancel</button></p></div></div>`;
 }
-const NAV=[['search','🔍','Search'],['saved','♥','Saved'],['compare','⇄','Compare'],['trips','🗓','My visits'],['why','★','Why us']];
+const NAV=[['search','🔍','Search'],['mates','👥','Roommates'],['compare','⇄','Compare'],['trips','🗓','My visits'],['why','★','Why us']];
 function render(){
-  let v;try{v={search:vSearch,detail:vDetail,saved:vSaved,compare:vCompare,trips:vTrips,why:vWhy}[S.view]()}catch(e){v='<p class="bad">'+esc(e.message)+'</p>'}
+  let v;try{v={search:vSearch,detail:vDetail,saved:vSaved,mates:vMates,compare:vCompare,trips:vTrips,why:vWhy}[S.view]()}catch(e){v='<p class="bad">'+esc(e.message)+'</p>'}
   const cur=S.view==='detail'?'search':S.view;
-  const n={saved:S.saved.length,compare:S.cmp.length,trips:myLeads().length};
+  const n={mates:S.reqs.length,compare:S.cmp.length,trips:myLeads().length};
   $('#app').innerHTML=v+vModal()+`<nav><div>${NAV.map(([k,i,t])=>`<button class="${cur===k?'on':''}" onclick="F.go('${k}')">${i}<br>${t}${n[k]?' ('+n[k]+')':''}</button>`).join('')}</div></nav>`;
 }
 
@@ -233,13 +341,27 @@ const F={
   save(id){const i=S.saved.indexOf(id);i>=0?S.saved.splice(i,1):S.saved.push(id);save();render()},
   cmp(id){const i=S.cmp.indexOf(id);if(i>=0)S.cmp.splice(i,1);else{if(S.cmp.length>=3)return toast('Compare up to 3 PGs');S.cmp.push(id)}save();render()},
   cost(id,ty){$('#cb').innerHTML=costRows(byId(id),ty)},
-  book(id){modal={pg:id};render()},close(){modal=null;render()},
+  book(id){modal={pg:id};render()},
+  bookRoom(pg,ty,pref,note){modal={pg,ty,pref,note};render()},
+  bookTogether(rid){const r=S.reqs.find(x=>x.id===rid),p=POOL.find(x=>x.id===r.pid);const pg=byId(p.area==='Ameerpet'&&S.profile.g==='Women'?'sunrise':STATIC.find(x=>x.area===p.area&&(x.gender.startsWith(S.profile.g)||x.gender.startsWith('Co-ed')))?STATIC.find(x=>x.area===p.area&&(x.gender.startsWith(S.profile.g)||x.gender.startsWith('Co-ed'))).id:'green');const ty=Object.keys(pg.types).map(Number).find(k=>k>=2)||Object.keys(pg.types)[0];modal={pg:pg.id,ty,note:'Coming together with '+p.name+' ('+compat(S.profile,p).pct+'% match). Both of you will be confirmed for the same room.'};render()},
+  mtab(k){S.mtab=k;save();render()},
+  profile(){
+    const g=id=>$('#'+id).value,n=g('r_n').trim();if(!n)return toast('Enter your name');
+    if(!$('#r_c').checked)return toast('Please tick the consent box');
+    const langs=[...document.querySelectorAll('.r_l:checked')].map(x=>x.value);if(!langs.length)return toast('Pick a language');
+    const P={name:n,g:g('r_g'),age:g('r_a'),role:g('r_r'),lang:langs};Q.forEach(([k])=>{const v=g('r_'+k);P[k]=['clean','noise','guests'].includes(k)?+v:v});
+    S.profile=P;S.me.name=S.me.name||n;S.mtab='people';save();render();toast('Profile saved. Showing your best matches.');
+  },
+  editProfile(){S.profile=null;save();render()},
+  req(id){const p=POOL.find(x=>x.id===id);S.reqs.push({id:'R'+Date.now().toString(36),pid:id,status:'sent'});save();render();toast('Request sent to '+p.name)},
+  accept(id){S.reqs.find(r=>r.id===id).status='accepted';save();render()},
+  agree(id){const g=x=>$('#'+x+id).value;S.reqs.find(r=>r.id===id).agree={quiet:g('ag_q_'),guests:g('ag_g_'),clean:g('ag_c_')};save();render()},close(){modal=null;render()},
   send(){
     const n=$('#b_n').value.trim(),ph=$('#b_p').value.replace(/\D/g,'').slice(-10);
     if(!n)return toast('Enter your name');if(ph.length!==10)return toast('Enter a 10-digit mobile number');
     if(!$('#b_c').checked)return toast('Please tick the consent box');
     S.me={name:n,phone:ph};save();
-    const a=leads();a.push({id:'L'+Date.now().toString(36),pg:modal.pg,name:n,phone:ph,sharing:+$('#b_t').value,dateLabel:$('#b_d').value,slot:$('#b_s').value,status:'requested',created:Date.now(),consent:true});
+    const a=leads();a.push({id:'L'+Date.now().toString(36),pg:modal.pg,name:n,phone:ph,sharing:+$('#b_t').value,dateLabel:$('#b_d').value,slot:$('#b_s').value,status:'requested',created:Date.now(),consent:true,pref:modal.pref||'',note:modal.note||''});
     saveLeads(a);modal=null;S.view='trips';save();render();toast('Request sent');
   },
   sim(id){const a=leads(),l=a.find(x=>x.id===id);if(!l)return;l.status=STEPS[Math.min(STEPS.indexOf(l.status)+1,3)];if(l.status==='moved')l.roomLabel='(demo)';saveLeads(a);render()},

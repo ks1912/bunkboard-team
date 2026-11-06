@@ -197,13 +197,14 @@ function vEnq(){
   const ls=getLeads().sort((a,b)=>b.created-a.created);
   if(!ls.length)return `<p class="mut">${t('enqNone')}</p>`;
   const stl={requested:['due','reqd'],confirmed:['paid','confd'],declined:['overdue','decl'],reserved:['paid','resvd'],moved:['paid','moved']};
-  return ls.map(l=>{const [c,k]=stl[l.status]||['t','reqd'];const vb=(l.status==='confirmed'||l.status==='reserved')?vacantBeds(l.sharing):[];
+  return ls.map(l=>{const [c,k]=stl[l.status]||['t','reqd'];const vb=(l.status==='confirmed'||l.status==='reserved')?vacantBeds(l.sharing):[];if(l.pref){const i=vb.findIndex(x=>(x.room+':'+x.bed)===l.pref);if(i>0)vb.unshift(vb.splice(i,1)[0])}
   return `<div class="card"><div class="row sp"><b>${esc(l.name)}</b><span class="chip ${c}">${t(k)}</span></div>
   <div class="mut sm">${l.status==='requested'?esc(l.phone.slice(0,2))+'xxxxx'+esc(l.phone.slice(-3))+' · '+t('phoneHidden'):esc(l.phone)}</div>
   <div class="sm" style="margin-top:4px">${t('pref')}: ${typeName(+l.sharing)} · ${t('visitOn')}: ${esc(l.dateLabel)}, ${esc(l.slot)}</div>
   <div class="mut sm">✓ ${t('consentOk')}</div>
+  ${l.note?`<div class="sm" style="margin-top:4px;color:var(--pri)">👥 ${esc(l.note)}</div>`:''}
   ${l.status==='requested'?`<div class="row" style="margin-top:8px"><button class="b p s" onclick="D.enq('${l.id}','confirmed')">${t('confirmVisit')}</button><button class="b d s" onclick="D.enq('${l.id}','declined')">${t('decline')}</button></div>`:''}
-  ${vb.length?`<label>${t('chooseBed')}</label><select id="mv_${l.id}">${vb.slice(0,30).map(x=>`<option value="${x.room}:${x.bed}">${t('room')} ${x.room} · B${x.bed+1} · ${typeName(x.type)} · ${inr(x.price)}</option>`).join('')}</select><p><button class="b p s" onclick="D.moveIn('${l.id}')">${t('moveIn')}</button></p>`:(l.status==='confirmed'||l.status==='reserved')?`<p class="mut sm">${t('noBed')}</p>`:''}</div>`}).join('');
+  ${vb.length?`<label>${t('chooseBed')}</label><select id="mv_${l.id}">${vb.slice(0,30).map(x=>`<option value="${x.room}:${x.bed}"${(x.room+':'+x.bed)===l.pref?' selected':''}>${t('room')} ${x.room} · B${x.bed+1} · ${typeName(x.type)} · ${inr(x.price)}</option>`).join('')}</select><p><button class="b p s" onclick="D.moveIn('${l.id}')">${t('moveIn')}</button></p>`:(l.status==='confirmed'||l.status==='reserved')?`<p class="mut sm">${t('noBed')}</p>`:''}</div>`}).join('');
 }
 function vStaff(){
   return S.staff.map(x=>`<div class="card"><div class="row sp"><div><b>${esc(x.name)}</b><div class="mut sm">${esc(x.role)} · ${inr(x.salary)}</div></div><span class="chip ${x.paid?'paid':'due'}">${x.paid?t('salaryPaid'):t('dueL')}</span></div>

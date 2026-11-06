@@ -49,7 +49,7 @@ Open `owner-demo.html` (link on the sign-in screen and under More). It needs no 
 
 ## Seeker demo (the PG-finder side)
 
-Open `find-pg.html` (link on the sign-in screen and under More). It shows what people looking for a PG would see: search by area, gender, sharing and budget; a verified score from licences and safety checks; live bed counts; true monthly cost; compare up to 3; book a visit with recorded consent; reserve a bed; and see their stay.
+Open `find-pg.html` (link on the sign-in screen and under More). It shows what people looking for a PG would see: search by area, gender, sharing and budget; a verified score from licences and safety checks; live bed counts; true monthly cost; compare up to 3; **roommate matching** (lifestyle questionnaire, compatibility %, rooms with a free bed ranked by how well you fit the current residents, roommate requests and a roommate agreement); book a visit with recorded consent; reserve a bed; and see their stay.
 
 It is linked to `owner-demo.html` through the browser's local storage. Open both pages in the same browser and the whole loop works: the seeker books a visit, the owner sees it under **Enquiries**, confirms, moves the person in, and when the seeker pays rent the owner's Residents list turns Paid. Seeker and owner demos share data on one device only. Nothing is sent to the database.
 
